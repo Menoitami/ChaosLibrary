@@ -3,9 +3,9 @@
 
 
 
+/*
 
-
-__host__ void bifurcation1D(
+void bifurcation1D(
 	const double	tMax,							
 	const int		nPts,							
 	const double	h,								
@@ -359,3 +359,5 @@ __host__ void bifurcation1D(
 
 	// ---------------------------
 }
+
+*/
