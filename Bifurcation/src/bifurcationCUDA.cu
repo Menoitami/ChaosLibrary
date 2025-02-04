@@ -1,21 +1,8 @@
 #include "bifurcationCUDA.cuh"
 
 // Необходимые переменные, что добавляются в константную память видеокарты
-__constant__ int d_histEntropySize; // Общий размер массива энтропии
-__constant__ int d_histEntropySizeRow; // Строки массива энтропии
-__constant__ int d_histEntropySizeCol; // Столбцы массива энтропии
-__constant__ double d_startBin; // Начало диапазона гистогроаммы
-__constant__ double d_endBin; // Конец диапазона гистограммы
-__constant__ double d_stepBin; // Шаг гистограммы
-__constant__ double d_tMax; // Время моделирования системы
-__constant__ double d_transTime; // Время прогона системы (transient time)
-__constant__ double d_h; // шаг системы
-__constant__ int d_coord; // Индекс координаты, для которой ищется энтропия
-__constant__ int d_paramsSize; // Колличество параметров системы
-__constant__ int d_XSize; // Колличество координат системы
-__constant__ int d_paramNumberA; // Индекс первого параметра
-__constant__ int d_paramNumberB; // Индекс второго параметра
-__device__ int d_progress; // Подсчет прогресса
+__constant__ int d_bifurSize; // Общий размер массива бифуркации
+
 
 __device__ const double EPSD = std::numeric_limits<double>::epsilon();
 
@@ -195,15 +182,6 @@ __global__ void calculateHistEntropyCuda3D(const double *X,
     int sum = 0;
 
     CalculateHistogram(X_locals, params_local, sum, bin);
-    double H = calculateEntropy(bin, binSize, sum);
-
-    histEntropy[row * d_histEntropySizeCol + col] = (H / __log2f(binSize));
-
-    // Подсчет прогресса выполнения задачи видеокартой 
-    if ((atomicAdd(&d_progress, 1) + 1) % (d_histEntropySize / 10) == 0)
-    {
-        printf("Progress: %d%%\n", ((d_progress + 1) * 100) / d_histEntropySize);
-    }
 }
 
 
@@ -461,24 +439,3 @@ __host__ std::vector<std::vector<double>> histEntropyCUDA3D(
     return histEntropy2DFinal;
 }
 
-
-__host__ std::vector<double> histEntropyCUDA2D(
-    const double transTime, const double tMax, const double h,
-    const std::vector<double> &X, const int coord,
-    std::vector<double> &params, const int paramNumberA,
-    const double startBin, const double endBin, const double stepBin,
-    double linspaceStartA, double linspaceEndA, int linspaceNumA)
-{
-    // В конец парамтров добавляется "пустышка" чтобы использовать ее как второй параметр и запускать функцию по вычислению энтропии по 2 параметрам
-    params.push_back(0);
-    int paramNumberB = params.size() - 1;
-    double linspaceStartB = params[paramNumberB];
-    double linspaceEndB = linspaceStartB;
-    double linspaceNumB = 1;
-
-    std::vector<std::vector<double>> histEntropy3D = histEntropyCUDA3D(transTime, tMax, h, X, coord, params, paramNumberA, paramNumberB,
-                                                                       startBin, endBin, stepBin, linspaceStartA, linspaceEndA, linspaceNumA,
-                                                                       linspaceStartB, linspaceEndB, linspaceNumB);
-
-    return histEntropy3D[0];
-}
