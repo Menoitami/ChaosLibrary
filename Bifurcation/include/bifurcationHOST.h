@@ -7,10 +7,9 @@
 
 #include <iomanip>
 #include <string>
-#include <iostream>
-#include <fstream>
-#include  <cmath>
 
+
+/*
 void bifurcation1D(
 	const double	tMax,							
 	const int		nPts,							
@@ -26,3 +25,4 @@ void bifurcation1D(
 	const int		amountOfValues,					
 	const int		preScaller,
 	std::string		OUT_FILE_PATH);	
+	*/
