@@ -2,7 +2,13 @@
 
 // Необходимые переменные, что добавляются в константную память видеокарты
 __constant__ int d_bifurSize; // Общий размер массива бифуркации
-
+__constant__ int d_XSize;
+__constant__ int d_paramsSize;
+__constant__ int d_paramNumber;
+__constant__ int d_coord;
+__constant__ double d_h;
+__constant__ double d_transTime;
+__constant__ double d_tMax;
 
 __device__ const double EPSD = std::numeric_limits<double>::epsilon();
 
