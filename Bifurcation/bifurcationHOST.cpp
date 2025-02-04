@@ -1,11 +1,21 @@
 #include "bifurcationHOST.h"
 #include <iostream>
 
+#define gpuErrorCheck(call)                                                 \
+    {                                                                       \
+        cudaError_t err = call;                                             \
+        if (err != cudaSuccess)                                             \
+        {                                                                   \
+            std::cerr << "CUDA Error: " << cudaGetErrorString(err)          \
+                      << " in file " << __FILE__ << " at line " << __LINE__ \
+                      << std::endl;                                         \
+            exit(err);                                                      \
+        }                                                                   \
+    }
 
 
 
-
-__host__ void bifurcation1D(
+void bifurcation1D(
 	const double	tMax,							
 	const int		nPts,							
 	const double	h,								
