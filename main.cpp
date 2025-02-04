@@ -1,10 +1,10 @@
 ﻿
-#include "bifurcationHOST.h"
+#include "bifurcation.h"
 #include <iostream>
 
 int main(){
 
-	std::cout<<"gg";
-	printGay();
+	
+	Bifurcation1D("D:/progs/cpp/ChaosLib/ff.csv");
 	return 0;
 }

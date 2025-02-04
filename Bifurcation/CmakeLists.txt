@@ -14,13 +14,13 @@ message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER}")
 
 # Укажите исходные файлы проекта
 set(SOURCES
-    src/bifurcationHOST.cpp
     src/bifurcationCUDA.cu
+    src/bifurcation.cpp
 )
 
 set(HEADERS
     include/bifurcationCUDA.cuh
-    include/bifurcationHOST.cuh
+    include/bifurcation.h
     )
 
 # Укажите заголовочные файлы для компиляции

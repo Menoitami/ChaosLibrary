@@ -28,5 +28,5 @@ include_directories(
 # Создайте исполняемый файл
 add_executable(ChaosLib ${SOURCES})
 
-target_link_libraries(ChaosLib PUBLIC CudaBifurcation)
+target_link_libraries(ChaosLib PRIVATE CudaBifurcation)
 set_target_properties(ChaosLib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
