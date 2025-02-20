@@ -27,7 +27,7 @@
 
 // -----------------------------
 
-
+namespace old_library{
 
 /**
  * �������, ��� ������� ���������� �������������� ���������.
@@ -473,5 +473,5 @@ __host__ void basinsOfAttraction_2(
 	std::string		OUT_FILE_PATH);								// ������� ��� ��������� DBSCAN 
 
 
-
+}
 
