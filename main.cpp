@@ -1,6 +1,6 @@
 #include "bifurcationHOST.h"
 #include "hostLibrary.cuh"
-
+#include "LLECUDA.cuh"
 #include <iostream>
 #include <stdio.h>
 #include <iomanip>
@@ -8,7 +8,7 @@
 #include <ctime>
 #include <conio.h>
 #include <chrono>
-using namespace old_library;
+//using namespace old_library;
 
 template <typename Func, typename... Args>
 void measureExecutionTime(Func&& func, const std::string& fileName, Args&&... args) {
@@ -527,26 +527,23 @@ double CT = 10000;
 //	sizeof(params) / sizeof(double), //const int amountOfValues,
 //	"D:\\CUDAresults\\LS1D_chameleon02_5.csv"
 //);
+//	new double[4]{ 0, 5, 0, 20 },
 
-	measureExecutionTime(
-		LLE2D,
-		"LLE2D_chameleon02_3_5.csv",
+	printf("Start_func\n");
+	LLE_constants::LLE2D(
 			500,		//const double tMax,
 			0.5,		//const double NT,
 			300,		//const int nPts,
 			h,			//const double h,
 			1e-6,		//const double eps,
 			init,		//const double* initialConditions,
-			sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
-			new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
-			new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
-			0,			//const int writableVar,
-			10000,		//const double maxValue,
 			1000,		//const double transientTime,
 			params,		//const double* values,
-			sizeof(params) / sizeof(double),	//const int amountOfValues,
-			"LLE2D_chameleon02_3_5.csv"
-	);
+			new double[3] {0,5,200},
+			new double[3] {0,20,200},
+			new int[2]{ 1, 2 },		
+			"LLE2D_my.csv");
+	
 		// LLE2D(
 		// 	500,		//const double tMax,
 		// 	0.5,		//const double NT,
