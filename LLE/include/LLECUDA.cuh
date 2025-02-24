@@ -5,12 +5,12 @@
 #include "cudaMacros.cuh"
 #include <iomanip>
 #include <string>
-
+const int size_params = 8;
 
 struct Calc_block{
-double* init;
-double* params;
-double* result;
+double init[size_params];
+double params[size_params];
+double result[size_params];
 
 double* final_num;
 };
@@ -25,6 +25,7 @@ __constant__ int d_size_linspace_B;
 __constant__ int d_amountOfTransPoints;
 __constant__ int d_amountOfNTPoints;
 __constant__ int d_amountOfAllpoints;
+__constant__ int d_amountOfCalcBlocks;
 
 __constant__ int d_Nt_steps; 
 
@@ -33,6 +34,7 @@ __constant__ int d_XSize;
 
 __constant__ int d_idxParamA;
 __constant__ int d_idxParamB;
+__constant__ double d_eps;
 
 __device__ int d_progress; 
 
@@ -50,6 +52,10 @@ __global__ void calculateSystem(
 	Calc_block ***calculatedBlocks
 );
 
+__global__ void calculateBlocks(
+	Calc_block ***calculatedBlocks,
+	double **result
+);
 
 
 __host__ void LLE2D(
@@ -58,9 +64,11 @@ __host__ void LLE2D(
 	const int nPts,
 	const double h,
 	const double eps,
-	const double* initialConditions,
 	const double transientTime,
+	const double* initialConditions,
+	const int amount_init,
 	const double* params,
+	const int amount_params,
 	const double* linspaceA_params,
 	const double* linspaceB_params,
 	const int* indicesOfMutVars,

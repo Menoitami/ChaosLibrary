@@ -535,13 +535,15 @@ double CT = 10000;
 			0.5,		//const double NT,
 			300,		//const int nPts,
 			h,			//const double h,
-			1e-6,		//const double eps,
-			init,		//const double* initialConditions,
-			1000,		//const double transientTime,
-			params,		//const double* values,
+			1e-6,	
+			1000,		//const double eps,
+			init,
+			3,		//const double* initialConditions,
+			params,	
+			7,	//const double* values,
 			new double[3] {0,5,200},
 			new double[3] {0,20,200},
-			new int[2]{ 1, 2 },		
+			new int[2]{ 3, 5 },		
 			"LLE2D_my.csv");
 	
 		// LLE2D(
