@@ -33,7 +33,6 @@ __device__ bool loopCalculateDiscreteModel(double *x, const double *params,
     return true;
 }
 
-namespace cg = cooperative_groups;
 __global__ void calculateSystem(
     double* X,
     double* params,
@@ -41,89 +40,80 @@ __global__ void calculateSystem(
     const double *paramLinspaceB,
     double **result
 ){
-    extern __shared__ double sh_mem[]; 
-    cg::thread_block block = cg::this_thread_block();
-    cg::thread_group pair = cg::tiled_partition<2>(block);
-    
-    const int idx_a = (threadIdx.x + blockIdx.x * blockDim.x) / 2;  
+    extern __shared__ double sh_mem[];
+
+    // Индексы для одного потока
+    const int idx_a = threadIdx.x + blockIdx.x * blockDim.x;
     const int idx_b = threadIdx.y + blockIdx.y * blockDim.y;
     if (idx_a >= d_size_linspace_A || idx_b >= d_size_linspace_B) return;
 
-    const bool is_main_thread = pair.thread_rank() == 0;
+    const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
+    const int total_size_per_thread = 2 * d_XSize + d_paramsSize;
 
-    const int thread_id = threadIdx.y * (blockDim.x / 2) + (threadIdx.x / 2);
-    const int total_size_per_pair = 2 * d_XSize + d_paramsSize;
+    // Разделение общей памяти для одного потока
+    double* my_sh_X = &sh_mem[thread_id * total_size_per_thread];
+    double* my_sh_params = &sh_mem[thread_id * total_size_per_thread + d_XSize];
+    double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_thread + d_XSize + d_paramsSize];
 
-    // Разделяем память между потоками в паре
-    double* my_sh_X = &sh_mem[thread_id * total_size_per_pair];              
-    double* my_sh_params = &sh_mem[thread_id * total_size_per_pair + d_XSize]; 
-    double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_pair + d_XSize + d_paramsSize]; 
-
-    // Инициализация данных для основной нити
-    if (is_main_thread) {
-        for (int i = 0; i < d_XSize; ++i) my_sh_X[i] = X[i];
-        for (int i = 0; i < d_paramsSize; ++i) my_sh_params[i] = params[i];
-
-        my_sh_params[d_idxParamA] = paramLinspaceA[idx_a];
-        my_sh_params[d_idxParamB] = paramLinspaceB[idx_b];
-
-        loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfTransPoints);
-
-        // Генератор случайных чисел — ускоряем за счет общей генерации
-        curandState_t state;
-        curand_init(idx_a, 0, 0, &state);
-
-        double norm_factor = 0.0;
-        for (int i = 0; i < d_XSize; ++i) {
-            double z = curand_uniform(&state) - 0.5;
-            norm_factor += z * z;
-        }
-        norm_factor = sqrt(norm_factor);
-
-        // Перебросим данные в perturbed_X
-        for (int i = 0; i < d_XSize; ++i) {
-            double z = (curand_uniform(&state) - 0.5) / norm_factor;
-            my_sh_perturbated_X[i] = my_sh_X[i] + z * d_eps;
-        }
+    // Инициализация данных
+    for (int i = 0; i < d_XSize; ++i) {
+        my_sh_X[i] = X[i];
+    }
+    for (int i = 0; i < d_paramsSize; ++i) {
+        my_sh_params[i] = params[i];
     }
 
-    pair.sync(); // Синхронизация потоков в группе
+    my_sh_params[d_idxParamA] = paramLinspaceA[idx_a];
+    my_sh_params[d_idxParamB] = paramLinspaceB[idx_b];
 
-    double local_result = 0.0;  
+    // Начальное вычисление модели
+    loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfTransPoints);
+
+    // Генерация случайных чисел
+    curandState_t state;
+    curand_init(idx_a, 0, 0, &state);
+
+    double norm_factor = 0.0;
+    for (int i = 0; i < d_XSize; ++i) {
+        double z = curand_uniform(&state) - 0.5;
+        norm_factor += z * z;
+    }
+    norm_factor = sqrt(norm_factor);
+
+    // Инициализация perturbated_X
+    for (int i = 0; i < d_XSize; ++i) {
+        double z = (curand_uniform(&state) - 0.5) / norm_factor;
+        my_sh_perturbated_X[i] = my_sh_X[i] + z * d_eps;
+    }
+
+    // Основной цикл вычислений
+    double local_result = 0.0;
     const double inv_eps = 1.0 / d_eps;
 
-    // Параллельный цикл с уменьшением синхронизаций
     for (int i = 0; i <= d_amountOfCalcBlocks; ++i) {
-        if (is_main_thread) {
-            loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfNTPoints);
-        } else {
-            loopCalculateDiscreteModel(my_sh_perturbated_X, my_sh_params, d_amountOfNTPoints);
+        // Вычисления для my_sh_X
+        loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfNTPoints);
+
+        // Вычисления для my_sh_perturbated_X
+        loopCalculateDiscreteModel(my_sh_perturbated_X, my_sh_params, d_amountOfNTPoints);
+
+        // Расчет расстояния и обновление perturbated_X
+        double distance = 0.0;
+        for (int l = 0; l < d_XSize; ++l) {
+            double diff = (my_sh_X[l] - my_sh_perturbated_X[l]) * inv_eps;
+            distance += diff * diff;
         }
+        distance = sqrt(distance);
+        local_result += log(distance);
 
-        pair.sync();  // Синхронизация внутри пары
-
-        if (is_main_thread) {
-            double distance = 0.0;
-            for (int l = 0; l < d_XSize; ++l) {
-                double diff = (my_sh_X[l] - my_sh_perturbated_X[l]) * inv_eps;
-                distance += diff * diff;
-            }
-            distance = sqrt(distance);
-            local_result += log(distance);
-
-            // Обновление perturbed_X с минимальной потерей данных
-            for (int j = 0; j < d_XSize; ++j) {
-                my_sh_perturbated_X[j] = my_sh_X[j] - ((my_sh_X[j] - my_sh_perturbated_X[j]) / distance);
-            }
+        // Обновление perturbated_X
+        for (int j = 0; j < d_XSize; ++j) {
+            my_sh_perturbated_X[j] = my_sh_X[j] - ((my_sh_X[j] - my_sh_perturbated_X[j]) / distance);
         }
-
-        pair.sync(); // Синхронизация перед новой итерацией
     }
 
-    // Атомарная операция для минимизации времени ожидания
-    if (is_main_thread) {
-        atomicAdd(&result[idx_a][idx_b], local_result);
-    }
+    // Запись результата
+    atomicAdd(&result[idx_a][idx_b], local_result);
 }
 
 __host__ double* linspace(double start, double end, int num)
@@ -216,22 +206,16 @@ __host__ void LLE2D(
     gpuErrorCheck(cudaMemcpyToSymbol(d_eps, &eps, sizeof(double)));
 
 
-    int max_threads_y = 10; 
-    int max_threads_x = 2 * max_threads_y;  
+    int max_threads=16;  
 
-    int gridSizeY = (size_B + max_threads_y - 1) / max_threads_y;
-    int gridSizeX = 2 * gridSizeY;
+    int gridSizeY = (size_B - 1) / max_threads;
+    int gridSizeX =  (size_A - 1) / max_threads;
 
-    // Ensure gridSizeX covers size_A with threadsPerBlock.x
-    int minGridSizeX = (size_A + max_threads_x - 1) / max_threads_x;
-    if (gridSizeX < minGridSizeX) {
-        gridSizeX = minGridSizeX;  // At least enough blocks to cover size_A
-    }
 
     // Define thread block and grid dimensions
-    dim3 threadsPerBlock(max_threads_x, max_threads_y, 1);  // e.g., (16, 8, 1)
+    dim3 threadsPerBlock(max_threads, max_threads, 1);  // e.g., (16, 8, 1)
     dim3 blocksPerGrid(gridSizeX, gridSizeY, 1);
-    size_t sharedMemSize = (max_threads_x * max_threads_y / 2) * (amount_params + amount_init + amount_init) * sizeof(double);  // For thread pairs
+    size_t sharedMemSize = (max_threads * max_threads) * (amount_params + amount_init + amount_init) * sizeof(double);  // For thread pairs
     printf("Total shared memory: %zu bytes\n", sharedMemSize);
 
     double** d_result;

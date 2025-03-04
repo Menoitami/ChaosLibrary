@@ -540,8 +540,8 @@ double CT = 10000;
 			3,		//ammount inti,
 			params,	//params
 			7,	// amount params,
-			new double[3] {0,5,100},
-			new double[3] {0,20,100},
+			new double[3] {0,5,300},
+			new double[3] {0,20,300},
 			new int[2]{ 3, 5 },		
 			"LLE2D_my.csv");
 	
