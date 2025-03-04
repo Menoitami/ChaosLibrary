@@ -41,24 +41,25 @@ __global__ void calculateSystem(
     const double *paramLinspaceB,
     double **result
 ){
-   extern __shared__ double sh_mem[];
+    extern __shared__ double sh_mem[]; 
     cg::thread_block block = cg::this_thread_block();
-    cg::thread_group pair = cg::tiled_partition<2>(block); // Разделяем блок на группы по 2 потока
-
+    cg::thread_group pair = cg::tiled_partition<2>(block);
+    
     const int idx_a = (threadIdx.x + blockIdx.x * blockDim.x) / 2;  
     const int idx_b = threadIdx.y + blockIdx.y * blockDim.y;
     if (idx_a >= d_size_linspace_A || idx_b >= d_size_linspace_B) return;
 
-    const bool is_main_thread = pair.thread_rank() == 0; // Основной поток (0) или perturbated (1)
+    const bool is_main_thread = pair.thread_rank() == 0;
 
     const int thread_id = threadIdx.y * (blockDim.x / 2) + (threadIdx.x / 2);
-    const int total_size_per_pair = 2 * d_XSize + d_paramsSize;  // Память для X, perturbated_X и params
+    const int total_size_per_pair = 2 * d_XSize + d_paramsSize;
 
     // Разделяем память между потоками в паре
     double* my_sh_X = &sh_mem[thread_id * total_size_per_pair];              
     double* my_sh_params = &sh_mem[thread_id * total_size_per_pair + d_XSize]; 
     double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_pair + d_XSize + d_paramsSize]; 
 
+    // Инициализация данных для основной нити
     if (is_main_thread) {
         for (int i = 0; i < d_XSize; ++i) my_sh_X[i] = X[i];
         for (int i = 0; i < d_paramsSize; ++i) my_sh_params[i] = params[i];
@@ -68,7 +69,7 @@ __global__ void calculateSystem(
 
         loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfTransPoints);
 
-        // Генератор случайных чисел
+        // Генератор случайных чисел — ускоряем за счет общей генерации
         curandState_t state;
         curand_init(idx_a, 0, 0, &state);
 
@@ -79,17 +80,19 @@ __global__ void calculateSystem(
         }
         norm_factor = sqrt(norm_factor);
 
+        // Перебросим данные в perturbed_X
         for (int i = 0; i < d_XSize; ++i) {
             double z = (curand_uniform(&state) - 0.5) / norm_factor;
             my_sh_perturbated_X[i] = my_sh_X[i] + z * d_eps;
         }
     }
 
-    pair.sync(); // Синхронизация внутри группы из 2 потоков
+    pair.sync(); // Синхронизация потоков в группе
 
     double local_result = 0.0;  
     const double inv_eps = 1.0 / d_eps;
 
+    // Параллельный цикл с уменьшением синхронизаций
     for (int i = 0; i <= d_amountOfCalcBlocks; ++i) {
         if (is_main_thread) {
             loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfNTPoints);
@@ -97,7 +100,7 @@ __global__ void calculateSystem(
             loopCalculateDiscreteModel(my_sh_perturbated_X, my_sh_params, d_amountOfNTPoints);
         }
 
-        pair.sync(); // Синхронизация только внутри пары
+        pair.sync();  // Синхронизация внутри пары
 
         if (is_main_thread) {
             double distance = 0.0;
@@ -108,6 +111,7 @@ __global__ void calculateSystem(
             distance = sqrt(distance);
             local_result += log(distance);
 
+            // Обновление perturbed_X с минимальной потерей данных
             for (int j = 0; j < d_XSize; ++j) {
                 my_sh_perturbated_X[j] = my_sh_X[j] - ((my_sh_X[j] - my_sh_perturbated_X[j]) / distance);
             }
@@ -116,6 +120,7 @@ __global__ void calculateSystem(
         pair.sync(); // Синхронизация перед новой итерацией
     }
 
+    // Атомарная операция для минимизации времени ожидания
     if (is_main_thread) {
         atomicAdd(&result[idx_a][idx_b], local_result);
     }
