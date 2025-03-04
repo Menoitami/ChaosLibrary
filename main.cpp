@@ -533,23 +533,22 @@ double CT = 10000;
 	LLE_constants::LLE2D(
 			500,		//const double tMax,
 			0.5,		//const double NT,
-			300,		//const int nPts,
 			h,			//const double h,
-			1e-6,	
-			1000,		//const double eps,
-			init,
-			3,		//const double* initialConditions,
-			params,	
-			7,	//const double* values,
-			new double[3] {0,5,200},
-			new double[3] {0,20,200},
+			1e-6,		//eps
+			1000,		//const trans time,
+			init,		// init
+			3,		//ammount inti,
+			params,	//params
+			7,	// amount params,
+			new double[3] {0,5,100},
+			new double[3] {0,20,100},
 			new int[2]{ 3, 5 },		
 			"LLE2D_my.csv");
 	
-		// LLE2D(
+		// old_library::LLE2D(
 		// 	500,		//const double tMax,
 		// 	0.5,		//const double NT,
-		// 	300,		//const int nPts,
+		// 	100,		//const int nPts,
 		// 	h,			//const double h,
 		// 	1e-6,		//const double eps,
 		// 	init,		//const double* initialConditions,
@@ -561,10 +560,10 @@ double CT = 10000;
 		// 	1000,		//const double transientTime,
 		// 	params,		//const double* values,
 		// 	sizeof(params) / sizeof(double),	//const int amountOfValues,
-		// 	"LLE2D_chameleon02_3_5.csv"
+		// 	"LLE2D_master.csv"
 		// );
 
-		// printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
+		//printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
 
 
 // measureExecutionTime(

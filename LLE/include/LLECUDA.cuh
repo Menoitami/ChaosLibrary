@@ -11,8 +11,6 @@ struct Calc_block{
 double init[size_params];
 double params[size_params];
 double result[size_params];
-
-double* final_num;
 };
 namespace LLE_constants{
 __constant__ double d_tMax;
@@ -38,6 +36,8 @@ __constant__ double d_eps;
 
 __device__ int d_progress; 
 
+__constant__ double d_h1;
+__constant__ double d_h2;
 
 __device__ void calculateDiscreteModel(double *x, const double *a, const double h);
 
@@ -49,7 +49,7 @@ __global__ void calculateSystem(
     double* params,
 	const double *paramLinspaceA,
 	const double *paramLinspaceB,
-	Calc_block ***calculatedBlocks
+    double **result
 );
 
 __global__ void calculateBlocks(
@@ -61,7 +61,6 @@ __global__ void calculateBlocks(
 __host__ void LLE2D(
 	const double tMax,
 	const double NT,
-	const int nPts,
 	const double h,
 	const double eps,
 	const double transientTime,
