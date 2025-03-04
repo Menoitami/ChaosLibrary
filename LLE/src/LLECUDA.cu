@@ -25,6 +25,8 @@ __device__ void calculateDiscreteModel(double *X, const double *a, const double 
 __device__ bool loopCalculateDiscreteModel(double *x, const double *params,
                                                     const int amountOfIterations)
 {
+    
+    #pragma unroll
     for (int i = 0; i < amountOfIterations; ++i)
     {
 
@@ -35,63 +37,78 @@ __device__ bool loopCalculateDiscreteModel(double *x, const double *params,
 
 
 __global__ void calculateTransTime(
-    double* X,
-    double* params,
-    const double* paramLinspaceA,
-    const double* paramLinspaceB,
-    double* semi_result
+    double* __restrict__ X,
+    double* __restrict__ params,
+    const double* __restrict__ paramLinspaceA,
+    const double* __restrict__ paramLinspaceB,
+    double* __restrict__ semi_result
 ) {
     extern __shared__ double sh_mem[];
 
-    const int idx_a = threadIdx.x + blockIdx.x * blockDim.x;
-    const int idx_b = threadIdx.y + blockIdx.y * blockDim.y;
+    int idx_a = threadIdx.x + blockIdx.x * blockDim.x;
+    int idx_b = threadIdx.y + blockIdx.y * blockDim.y;
     if (idx_a >= d_size_linspace_A || idx_b >= d_size_linspace_B) return;
 
-    const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
-    const int total_size_per_thread = 2 * d_XSize + d_paramsSize;  // Полное состояние
+    int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
+    int global_id = idx_b * d_size_linspace_A + idx_a;
+    int total_size_per_thread = 32*3;
 
-    // Указатели в общей памяти
-    double* my_sh_X = &sh_mem[thread_id * total_size_per_thread];
-    double* my_sh_params = &sh_mem[thread_id * total_size_per_thread + d_XSize];
-    double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_thread + d_XSize + d_paramsSize];
+    // Коалесированная загрузка X и params
+    double* my_sh_X = &sh_mem[threadIdx.x * d_XSize];
+    double* my_sh_params = &sh_mem[blockDim.x * d_XSize + threadIdx.x * d_paramsSize];
 
-    // Инициализация данных
-    for (int i = 0; i < d_XSize; ++i) {
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_XSize; i += blockDim.x) {
         my_sh_X[i] = X[i];
     }
-    for (int i = 0; i < d_paramsSize; ++i) {
+
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_paramsSize; i += blockDim.x) {
         my_sh_params[i] = params[i];
     }
+
+    __syncwarp();  // Ждем, пока все потоки закончат загрузку
+
     my_sh_params[d_idxParamA] = paramLinspaceA[idx_a];
     my_sh_params[d_idxParamB] = paramLinspaceB[idx_b];
 
-    // Начальное вычисление модели
     loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfTransPoints);
 
-    // Генерация perturbated_X
+    // Коалесированная генерация шума
     curandState_t state;
-    curand_init(idx_a + idx_b * d_size_linspace_A, 0, 0, &state);
+    curand_init(global_id, 0, 0, &state);
 
-    double norm_factor = 0.0;
-    for (int i = 0; i < d_XSize; ++i) {
+    double norm_factor = 1e-10;
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_XSize; i += blockDim.x) {
         double z = curand_uniform(&state) - 0.5;
         norm_factor += z * z;
     }
-    norm_factor = sqrt(norm_factor);
+    norm_factor = rsqrt(norm_factor);
 
-    for (int i = 0; i < d_XSize; ++i) {
-        double z = (curand_uniform(&state) - 0.5) / norm_factor;
-        my_sh_perturbated_X[i] = my_sh_X[i] + z * d_eps;
+    // Коалесированное вычисление perturbated_X
+    double* my_sh_perturbated_X = &sh_mem[(blockDim.x * (d_XSize + d_paramsSize)) + threadIdx.x * d_XSize];
+
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_XSize; i += blockDim.x) {
+        double z = (curand_uniform(&state) - 0.5) * norm_factor * d_eps;
+        my_sh_perturbated_X[i] = my_sh_X[i] + z;
     }
 
-    // Сохранение полного состояния в глобальную память
-    double* res_sh_X = &semi_result[(idx_a * d_size_linspace_A + idx_b ) * total_size_per_thread];
-    for (int i = 0; i < d_XSize; ++i) {
-        res_sh_X[i] = my_sh_X[i];                    // X
-        res_sh_X[i + d_XSize + d_paramsSize] = my_sh_perturbated_X[i];  // perturbated_X
+    __syncwarp(); // Синхронизация перед записью в глобальную память
+
+    double* res = &semi_result[global_id * total_size_per_thread];
+
+    // Коалесированная запись в глобальную память
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_XSize; i += blockDim.x) {
+        //res[i] = my_sh_X[i];
+        //res[i + 32 + 32] = my_sh_perturbated_X[i];
     }
-    for (int i = 0; i < d_paramsSize; ++i) {
-        res_sh_X[i + d_XSize] = my_sh_params[i];     // params
+
+    #pragma unroll
+    for (int i = threadIdx.x; i < d_paramsSize; i += blockDim.x) {
+       // res[i + 32] = my_sh_params[i];
     }
 }
 
@@ -103,7 +120,7 @@ __global__ void calculateSystem(
     double* semi_result,
     double** result
 ) {
-    extern __shared__ double sh_mem[];
+    extern __shared__  double sh_mem[];
 
     const int idx_a = threadIdx.x + blockIdx.x * blockDim.x;
     const int idx_b = threadIdx.y + blockIdx.y * blockDim.y;
@@ -132,8 +149,8 @@ __global__ void calculateSystem(
     const double inv_eps = 1.0 / d_eps;
 
     for (int i = 0; i <= d_amountOfCalcBlocks; ++i) {
-        loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfNTPoints);
-        loopCalculateDiscreteModel(my_sh_perturbated_X, my_sh_params, d_amountOfNTPoints);
+        loopCalculateDiscreteModel((double*)my_sh_X, (double*)my_sh_params, d_amountOfNTPoints);
+        loopCalculateDiscreteModel((double*)my_sh_perturbated_X, (double*)my_sh_params, d_amountOfNTPoints);
 
         // Расчет расстояния
         double distance = 0.0;
@@ -279,7 +296,7 @@ __host__ void LLE2D(
 
 
     double* d_semi_result;
-    gpuErrorCheck(cudaMalloc(&d_semi_result, size_A * size_B * (2 * amount_init + amount_params) * sizeof(double)));
+    gpuErrorCheck(cudaMalloc(&d_semi_result, size_A * size_B * 32 *3 * sizeof(double)));
 
     double* d_paramLinspaceA;
     double* d_paramLinspaceB;
@@ -305,8 +322,6 @@ __host__ void LLE2D(
         d_semi_result
     );
     gpuErrorCheck(cudaDeviceSynchronize());
-    gpuErrorCheck(cudaPeekAtLastError());
-
     // Второй вызов: расчет системы
     LLE_constants::calculateSystem<<<blocksPerGrid, threadsPerBlock, sharedMemSize>>>(
         d_X,
