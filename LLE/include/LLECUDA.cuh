@@ -41,7 +41,7 @@ __constant__ double d_h2;
 
 __device__ void calculateDiscreteModel(double *x, const double *a, const double h);
 
-__device__ bool loopCalculateDiscreteModel(double *x, const double *params,
+__device__ void loopCalculateDiscreteModel(double *X, const double *a,
                                                     const int amountOfIterations);
 
 __global__ void calculateSystem(

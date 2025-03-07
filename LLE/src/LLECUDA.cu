@@ -9,28 +9,58 @@ namespace LLE_constants{
 	
 __device__ void calculateDiscreteModel(double *X, const double *a, const double h)
 {
+
+    double cos_term = cos(a[5] * X[1]);
     X[0] += d_h1 * (-a[6] * X[1]);
     X[1] += d_h1 * (a[6] * X[0] + a[1] * X[2]);
-    X[2] += d_h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1])); // Убрали cos_term
+    X[2] += d_h1 * (a[2] - a[3] * X[2] + a[4] * cos_term); 
 
     // Вычисление общего коэффициента для второй фазы
     double inv_den = 1.0 / (1.0 + a[3] * d_h2);
 
     // Обновления второй фазы
-    X[2] = fma(d_h2, (a[2] + a[4] * cos(a[5] * X[1])), X[2]) * inv_den;
+    X[2] = fma(d_h2, (a[2] + a[4] * cos_term), X[2]) * inv_den;
     X[1] += d_h2 * (a[6] * X[0] + a[1] * X[2]);
     X[0] += d_h2 * (-a[6] * X[1]);
 }
 
-__device__ bool loopCalculateDiscreteModel(double *x, const double *params,
+__device__ void loopCalculateDiscreteModel(double *X, const double *a,
                                                     const int amountOfIterations)
 {
+
+    double x0 = X[0];
+    double x1 = X[1];
+    double x2 = X[2];
+
+    // Загружаем элементы массива a в регистры
+    double a0 = a[0]; // Предполагаем, что a[0] может использоваться где-то вне видимого кода
+    double a1 = a[1];
+    double a2 = a[2];
+    double a3 = a[3];
+    double a4 = a[4];
+    double a5 = a[5];
+    double a6 = a[6];
+
+    #pragma unroll
     for (int i = 0; i < amountOfIterations; ++i)
     {
+        double cos_term = cos(a5 * x1);
+        x0 = __fma_rn(d_h1, (-a6 * x1), x0);          // x0 += d_h1 * (-a6 * x1)
+        x1 = __fma_rn(d_h1, (a6 * x0 + a1 * x2), x1); // x1 += d_h1 * (a6 * x0 + a1 * x2)
+        x2 = __fma_rn(d_h1, (a2 - a3 * x2 + a4 * cos_term), x2); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
 
-        calculateDiscreteModel(x, params, d_h);
+        // Вычисление общего коэффициента для второй фазы
+        float inv_den = __frcp_rn(__fmaf_rn(a3, d_h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
+
+        // Вторая фаза
+        x2 = __fma_rn(d_h2, (a2 + a4 * cos_term), x2) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
+        x1 = __fma_rn(d_h2, (a6 * x0 + a1 * x2), x1); // x1 += d_h2 * (a6 * x0 + a1 * x2)
+        x0 = __fma_rn(d_h2, (-a6 * x1), x0);          // x0 += d_h2 * (-a6 * x1)
     }
-    return true;
+
+    X[0] = x0;
+    X[1] = x1;
+    X[2] = x2;
 }
 
 
@@ -72,16 +102,15 @@ __global__ void calculateTransTime(
     curandState_t state;
     curand_init(idx_a + idx_b * d_size_linspace_A, 0, 0, &state);
 
-    double norm_factor = 0.0;
+    float norm_factor = 0.0f;
     for (int i = 0; i < d_XSize; ++i) {
-        double z = curand_uniform(&state) - 0.5;
-        norm_factor += z * z;
+        float z = curand_uniform(&state) - 0.5f;
+        norm_factor = __fmaf_rn(z, z, norm_factor);
     }
-    norm_factor = sqrt(norm_factor);
-
+    norm_factor = __fmul_rn(rsqrtf(norm_factor), norm_factor);
     for (int i = 0; i < d_XSize; ++i) {
-        double z = (curand_uniform(&state) - 0.5) / norm_factor;
-        my_sh_perturbated_X[i] = my_sh_X[i] + z * d_eps;
+        float z = __fdiv_rn(curand_uniform(&state) - 0.5f, norm_factor);
+        my_sh_perturbated_X[i] = __fmaf_rn(z, (float)d_eps, my_sh_X[i]);
     }
 
     // Сохранение полного состояния в глобальную память
