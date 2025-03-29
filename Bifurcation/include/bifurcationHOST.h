@@ -1,27 +1,33 @@
-#pragma once
+#ifndef BIFURCATION_HOST_H
+#define BIFURCATION_HOST_H
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-
+#include "bifurcationCUDA.cuh"
+#include "cudaMacros.cuh"
 
 #include <iomanip>
 #include <string>
 
+namespace Bifurcation {
+    /**
+     * Функция для расчета бифуркационной диаграммы в 1D
+     */
+    void bifurcation1D(
+        const double    tMax,                           // Время моделирования системы
+        const int       nPts,                           // Количество разбиений
+        const double    h,                              // Шаг интегрирования
+        const int       amountOfInitialConditions,      // Количество начальных условий (уравнений в системе)
+        const double*   initialConditions,              // Массив с начальными условиями
+        const double*   ranges,                         // Диапазон изменения параметров
+        const int*      indicesOfMutVars,               // Индекс изменяемого параметра в массиве values
+        const int       writableVar,                    // Индекс параметра, по которому будем строить диаграмму
+        const double    maxValue,                       // Максимальное значение (по модулю), выше которого система считается "расходящейся"
+        const double    transientTime,                  // Время, которое будет промоделировано перед расчетом диаграммы
+        const double*   values,                         // Параметры
+        const int       amountOfValues,                 // Количество параметров
+        const int       preScaller,                     // Множитель, который уменьшает время и объем расчетов
+        std::string     OUT_FILE_PATH);                 // Путь к выходному файлу
+}
 
-/*
-void bifurcation1D(
-	const double	tMax,							
-	const int		nPts,							
-	const double	h,								
-	const int		amountOfInitialConditions,		
-	const double*	initialConditions,				
-	const double*	ranges,							
-	const int*		indicesOfMutVars,				
-	const int		writableVar,					
-	const double	maxValue,						
-	const double	transientTime,					
-	const double*	values,							
-	const int		amountOfValues,					
-	const int		preScaller,
-	std::string		OUT_FILE_PATH);	
-	*/
+#endif // BIFURCATION_HOST_H
