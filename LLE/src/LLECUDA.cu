@@ -7,22 +7,7 @@
 #include <cooperative_groups.h>
 namespace LLE_constants{
 	
-__device__ void calculateDiscreteModel(double *X, const double *a, const double h)
-{
 
-    double cos_term = cos(a[5] * X[1]);
-    X[0] += d_h1 * (-a[6] * X[1]);
-    X[1] += d_h1 * (a[6] * X[0] + a[1] * X[2]);
-    X[2] += d_h1 * (a[2] - a[3] * X[2] + a[4] * cos_term); 
-
-    // Вычисление общего коэффициента для второй фазы
-    double inv_den = 1.0 / (1.0 + a[3] * d_h2);
-
-    // Обновления второй фазы
-    X[2] = fma(d_h2, (a[2] + a[4] * cos_term), X[2]) * inv_den;
-    X[1] += d_h2 * (a[6] * X[0] + a[1] * X[2]);
-    X[0] += d_h2 * (-a[6] * X[1]);
-}
 
 __device__ void loopCalculateDiscreteModel(double *X, const double *a,
                                                     const int amountOfIterations)
@@ -280,15 +265,15 @@ __host__ void LLE2D(
     int max_threads_y =  16;  
     int max_threads_x =  16;  
 
-    int gridSizeY = (size_B - 1) / max_threads_y;
-    int gridSizeX =  (size_A - 1) / max_threads_x;
+    int gridSizeY = (size_B+max_threads_y-1) / max_threads_y;
+    int gridSizeX =  (size_A+max_threads_x-1) / max_threads_x;
 
 
     // Define thread block and grid dimensions
-    dim3 threadsPerBlock(max_threads_x, max_threads_y, 1);  // e.g., (16, 8, 1)
+    dim3 threadsPerBlock(max_threads_x, max_threads_y, 1); 
     dim3 blocksPerGrid(gridSizeX, gridSizeY, 1);
 
-    size_t sharedMemSizeTrans = (max_threads_x * max_threads_y) * (amount_init + amount_params) * sizeof(double);
+    size_t sharedMemSizeTrans = (max_threads_x * max_threads_y) * (amount_init + amount_init + amount_params) * sizeof(double);
     size_t sharedMemSize = (max_threads_x * max_threads_y) * (2 * amount_init + amount_params) * sizeof(double);  // For thread pairs
     printf("Total shared memory: %zu bytes\n", sharedMemSize);
 
