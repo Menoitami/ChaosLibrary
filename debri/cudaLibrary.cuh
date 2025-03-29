@@ -10,7 +10,7 @@
 #include <math.h>
 #include <curand_kernel.h>
 
-
+namespace old_library{
 /**  
  * ¬ычисл€ет следующее значение дискретной модели
  * и записывает результат в x
@@ -655,3 +655,4 @@ __global__ void CUDA_dbscan_search_unbound_points_kernel(double* data, double* i
 	const int amountOfData, int* res);
 
 
+} //old_library

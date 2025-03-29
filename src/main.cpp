@@ -1,6 +1,6 @@
 #include "bifurcationHOST.h"
 #include "hostLibrary.cuh"
-
+#include "LLECUDA.cuh"
 #include <iostream>
 #include <stdio.h>
 #include <iomanip>
@@ -8,7 +8,7 @@
 #include <ctime>
 #include <conio.h>
 #include <chrono>
-
+//using namespace old_library;
 
 template <typename Func, typename... Args>
 void measureExecutionTime(Func&& func, const std::string& fileName, Args&&... args) {
@@ -527,30 +527,28 @@ double CT = 10000;
 //	sizeof(params) / sizeof(double), //const int amountOfValues,
 //	"D:\\CUDAresults\\LS1D_chameleon02_5.csv"
 //);
+//	new double[4]{ 0, 5, 0, 20 },
 
-	// measureExecutionTime(
-	// 	LLE2D,
-	// 	"LLE2D_chameleon02_3_5.csv",
-	// 		500,		//const double tMax,
-	// 		0.5,		//const double NT,
-	// 		300,		//const int nPts,
-	// 		h,			//const double h,
-	// 		1e-6,		//const double eps,
-	// 		init,		//const double* initialConditions,
-	// 		sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
-	// 		new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
-	// 		new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
-	// 		0,			//const int writableVar,
-	// 		10000,		//const double maxValue,
-	// 		1000,		//const double transientTime,
-	// 		params,		//const double* values,
-	// 		sizeof(params) / sizeof(double),	//const int amountOfValues,
-	// 		"LLE2D_chameleon02_3_5.csv"
-	// );
-		// LLE2D(
+	printf("Start_func\n");
+	LLE_constants::LLE2D(
+			500,		//const double tMax,
+			0.5,		//const double NT,
+			h,			//const double h,
+			1e-6,		//eps
+			1000,		//const trans time,
+			init,		// init
+			3,		//ammount inti,
+			params,	//params
+			7,	// amount params,
+			new double[3] {0,5,100},
+			new double[3] {0,20,100},
+			new int[2]{ 3, 5 },		
+			"LLE2D_my.csv");
+	
+		// old_library::LLE2D(
 		// 	500,		//const double tMax,
 		// 	0.5,		//const double NT,
-		// 	300,		//const int nPts,
+		// 	100,		//const int nPts,
 		// 	h,			//const double h,
 		// 	1e-6,		//const double eps,
 		// 	init,		//const double* initialConditions,
@@ -562,10 +560,10 @@ double CT = 10000;
 		// 	1000,		//const double transientTime,
 		// 	params,		//const double* values,
 		// 	sizeof(params) / sizeof(double),	//const int amountOfValues,
-		// 	"LLE2D_chameleon02_3_5.csv"
+		// 	"LLE2D_master.csv"
 		// );
 
-		// printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
+		//printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
 
 
 // measureExecutionTime(
@@ -874,24 +872,24 @@ double CT = 10000;
 //		"D:\\CUDAresults\\bif2D_ECG_model_m0m1.csv"
 //	);
 
-measureExecutionTime(
-		LLE2D,
-		"LLE2D_sem_02.csv",
-		1000, // const double tMax,
-		0.4, // const double NT,
-		200, // const int nPts,
-		1e-2, // const double h,
-		1e-8, // const double eps,
-		new double[4]{ 0.009, 0.003, 0, 0 }, // const double* initialConditions,
-		4, // const int amountOfInitialConditions,
-		new double[4]{ -0.015, 0.015, -180, 180}, // const double* ranges,
-		new int[2]{ 1, 2 }, // const int* indicesOfMutVars,
-		0, // const int writableVar,
-		10000, // const double maxValue,
-		20000, // const double transientTime,
-		new double[4]{ 0.5, -0.015, -180, 0.1 }, // const double* values,
-		4,
-		"LLE2D_sem_02.csv"); // const int amountOfValues);
+// measureExecutionTime(
+// 		LLE2D,
+// 		"LLE2D_sem_02.csv",
+// 		1000, // const double tMax,
+// 		0.4, // const double NT,
+// 		200, // const int nPts,
+// 		1e-2, // const double h,
+// 		1e-8, // const double eps,
+// 		new double[4]{ 0.009, 0.003, 0, 0 }, // const double* initialConditions,
+// 		4, // const int amountOfInitialConditions,
+// 		new double[4]{ -0.015, 0.015, -180, 180}, // const double* ranges,
+// 		new int[2]{ 1, 2 }, // const int* indicesOfMutVars,
+// 		0, // const int writableVar,
+// 		10000, // const double maxValue,
+// 		20000, // const double transientTime,
+// 		new double[4]{ 0.5, -0.015, -180, 0.1 }, // const double* values,
+// 		4,
+// 		"LLE2D_sem_02.csv"); // const int amountOfValues);
 
 	//LLE2D(
 	//	1000, // const double tMax,
@@ -1366,24 +1364,24 @@ measureExecutionTime(
 	//"D:\\CUDAresults\\LLE2D_AND_TS_neuron2.csv"
 	//);
 
-measureExecutionTime(
-		LLE2D,
-		"LLE2D_AND_TS_neuron3.csv",
-		0.5, // const double tMax,
-		5e-4, // const double NT,
-		1000, // const int nPts,
-		5e-7, // const double h,
-		1e-5, // const double eps,
-		init, // const double* initialConditions,
-		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
-		new double[4]{ 0, 2.0e-6, 100, 2200 }, // const double* ranges,
-		new int[2]{ 25, 26 }, // const int* indicesOfMutVars,
-		0, // const int writableVar,
-		10000, // const double maxValue,
-		0.1, // const double transientTime,
-		a, // const double* values,
-		sizeof(a) / sizeof(double),
-		"LLE2D_AND_TS_neuron3.csv"); 
+// measureExecutionTime(
+// 		LLE2D,
+// 		"LLE2D_AND_TS_neuron3.csv",
+// 		0.5, // const double tMax,
+// 		5e-4, // const double NT,
+// 		1000, // const int nPts,
+// 		5e-7, // const double h,
+// 		1e-5, // const double eps,
+// 		init, // const double* initialConditions,
+// 		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
+// 		new double[4]{ 0, 2.0e-6, 100, 2200 }, // const double* ranges,
+// 		new int[2]{ 25, 26 }, // const int* indicesOfMutVars,
+// 		0, // const int writableVar,
+// 		10000, // const double maxValue,
+// 		0.1, // const double transientTime,
+// 		a, // const double* values,
+// 		sizeof(a) / sizeof(double),
+// 		"LLE2D_AND_TS_neuron3.csv"); 
 	//LLE2D(
 	//0.5, // const double tMax,
 	//5e-4, // const double NT,

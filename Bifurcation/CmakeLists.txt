@@ -17,7 +17,7 @@ set(SOURCES
 
 set(HEADERS
     include/bifurcationCUDA.cuh
-    include/bifurcationHOST.cuh
+    include/bifurcationHOST.h
     )
 
 # Укажите заголовочные файлы для компиляции

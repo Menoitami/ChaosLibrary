@@ -7,7 +7,7 @@
 
 // --- ƒиректива, объ€вление которой выводит в консоль отладочные сообщени€ ---
 #define DEBUG
-
+namespace old_library{
 __host__ void FastSynchro(
 	const double	tMax,								// ¬рем€ моделировани€ системы
 	const double	transientTime,						// ¬рем€, которое будет промоделировано перед расчетом диаграммы
@@ -5328,3 +5328,4 @@ __host__ void TimeDomainCalculation(
 
 	// ---------------------------
 }
+} // old_library

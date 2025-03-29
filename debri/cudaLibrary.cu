@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------------
 // --- ��������� ��������� �������� ���������� ������ � ���������� ��������� � x ---
 // ---------------------------------------------------------------------------------
-
+namespace old_library{
 __device__ __host__ void calculateDiscreteModelforFastSynchro(double* X, double* S1, double* K, const double* a, const double h)
 {
 
@@ -4350,3 +4350,5 @@ __global__ void CUDA_dbscan_search_unbound_points_kernel(double* data, double* i
 //X[2] = (X[2] + h2 * (a[4] * X[0])) / (1 - h2 * (a[1] + a[2] - X[0] * X[0] - a[2] * X[1] * X[1]));
 //X[1] = (X[1] + h2 * (a[5] * X[0])) / (1 - h2 * (X[2] * X[2] - a[3]));
 //X[0] = (X[0] + h2 * (-a[5] * X[1])) / (1 - h2 * (X[2] * X[2] - a[3]));
+
+} // old_library
