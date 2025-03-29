@@ -29,6 +29,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation/include
     ${CMAKE_CURRENT_SOURCE_DIR}/debri
+    ${CMAKE_CURRENT_SOURCE_DIR}/LLE/include
     )
 
 # Создайте исполняемый файл
