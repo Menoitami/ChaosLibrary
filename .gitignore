@@ -1,3 +1,20 @@
-﻿build
-.vscode
-workspace
+﻿build/
+.vscode/
+workspace/
+results/
+scripts/
+# Ignore build output and generated files
+*.exe
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+*.out
+*.app
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile

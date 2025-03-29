@@ -21,13 +21,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/debri)
 
 
 set(SOURCES
-    main.cpp
+    src/main.cpp
 )
 
 # Укажите заголовочные файлы для компиляции
 include_directories(
     ${CUDA_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation/include
     ${CMAKE_CURRENT_SOURCE_DIR}/debri
     )
