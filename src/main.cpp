@@ -493,7 +493,7 @@ double CT = 10000;
 
 	Bifurcation::bifurcation2D(
 		400, // const double tMax,
-		100, // const int nPts,
+		50, // const int nPts,
 		h, // const double h,
 		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
 		init, // const double* initialConditions,
@@ -507,7 +507,7 @@ double CT = 10000;
 		sizeof(params) / sizeof(double), // const int amountOfValues,
 		1, // const int preScaller,
 		0.001, //eps
-		std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_diagram_ChaosLibrary_scale_100.csv"
+		std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_1.csv"
 	);
 
 //LS1D(

@@ -9,28 +9,33 @@
 #include <string>
 
 namespace Bifurcation_constants {
+
+__host__ void bifurcation2D(
+	const double	tMax,								// Время моделирования системы
+	const int		nPts,								// Разрешение диаграммы
+	const double	h,									// Шаг интегрирования
+	const int		amountOfInitialConditions,			// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,					// Массив с начальными условиями
+	const double* ranges,								// Диапазоны изменения параметров
+	const int* indicesOfMutVars,					// Индексы изменяемых параметров
+	const int		writableVar,						// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,							// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,						// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,								// Параметры
+	const int		amountOfValues,						// Количество параметров
+	const int		preScaller,							// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+	const double	eps,
+	std::string		OUT_FILE_PATH);					// Эпсилон для алгоритма DBSCAN 
+
 __global__ void calculateDiscreteModelCUDA(
-	const int		nPts, 
-	const int		nPtsLimiter, 
-	const int		sizeOfBlock, 
-	const int		amountOfCalculatedPoints, 
-	const int		amountOfPointsForSkip,
-	const int		dimension, 
 	double*			ranges, 
-	const double	h,
 	int*			indicesOfMutVars, 
 	double*			initialConditions,
-	const int		amountOfInitialConditions, 
 	const double*	values, 
-	const int		amountOfValues,
-	const int		amountOfIterations, 
-	const int		preScaller,
-	const int		writableVar, 
-	const double	maxValue, 
 	double*			data, 
 	int*			maxValueCheckerArray);
 
-__global__ void peakFinderCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks, 
+__global__ void peakFinderCUDA(double* data, 
 	int* amountOfPeaks, double* outPeaks, double* timeOfPeaks, double h);
 
 __global__ void dbscanCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks,

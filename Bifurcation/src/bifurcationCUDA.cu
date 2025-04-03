@@ -5,213 +5,378 @@
 #include <iomanip>
 
 namespace Bifurcation_constants {
+__constant__ double d_tMax;
+__constant__ int d_nPts;
+__constant__ double d_h;
+__constant__ int d_amountOfInitialConditions;
+
+__constant__ int d_writableVar;
+__constant__ double d_maxValue;
+__constant__ double d_transientTime;
+
+__constant__ int d_amountOfValues;
+__constant__ int d_preScaller;
+__constant__ double d_eps;
+
+
+__constant__ int d_sizeOfBlock;
+__constant__ int d_dimension;
+__constant__ int d_amountOfIterations;
+
+
+__constant__ int d_nPtsLimiter;
+
+__constant__ int d_amountOfPointsInBlock;
+__constant__ int d_amountOfPointsForSkip;
+__constant__ int d_originalNPtsLimiter;
+
+__constant__ int d_amountOfCalculatedPoints;
+
+
+__host__ void bifurcation2D(
+	const double	tMax,								// Время моделирования системы
+	const int		nPts,								// Разрешение диаграммы
+	const double	h,									// Шаг интегрирования
+	const int		amountOfInitialConditions,			// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,					// Массив с начальными условиями
+	const double* ranges,								// Диапазоны изменения параметров
+	const int* indicesOfMutVars,					// Индексы изменяемых параметров
+	const int		writableVar,						// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,							// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,						// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,								// Параметры
+	const int		amountOfValues,						// Количество параметров
+	const int		preScaller,							// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+	const double	eps,
+	std::string		OUT_FILE_PATH)								// Эпсилон для алгоритма DBSCAN 
+{
+	int amountOfPointsInBlock = tMax / h / preScaller;
+
+	int amountOfPointsForSkip = transientTime / h;
+
+	size_t freeMemory;											
+	size_t totalMemory;											
+	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));	
+	freeMemory *= 0.95;				
+	size_t nPtsLimiter = freeMemory / (sizeof(double) * amountOfPointsInBlock * 3);
+	nPtsLimiter = nPtsLimiter > (nPts * nPts) ? (nPts * nPts) : nPtsLimiter;
+	size_t originalNPtsLimiter = nPtsLimiter;				
+
+	int* h_dbscanResult = new int[nPtsLimiter * sizeof(int)];
+
+
+
+	double* d_data;					// Указатель на массив в памяти GPU для хранения траектории системы
+	double* d_ranges;				// Указатель на массив с диапазоном изменения переменной
+	int* d_indicesOfMutVars;		// Указатель на массив с индексом изменяемой переменной в массиве values
+	double* d_initialConditions;	// Указатель на массив с начальными условиями
+	double* d_values;				// Указатель на массив с параметрами
+
+	int* d_amountOfPeaks;		// Указатель на массив в GPU с кол-вом пиков в каждой системе.
+	double* d_intervals;			// Указатель на массив в GPU с межпиковыми интервалами пиков
+	int* d_dbscanResult;			// Указатель на массив в GPU результирующей матрицы (диаграммы) в GPU
+	double* d_helpfulArray;			// Указатель на массив в GPU на вспомогательный массив
+
+
+	gpuErrorCheck(cudaMalloc((void**)& d_data, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_ranges, 4 * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_indicesOfMutVars, 2 * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_initialConditions, amountOfInitialConditions * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_values, amountOfValues * sizeof(double)));
+
+	gpuErrorCheck(cudaMalloc((void**)& d_amountOfPeaks, nPtsLimiter * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_intervals, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_dbscanResult, nPtsLimiter * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_helpfulArray, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+
+	gpuErrorCheck(cudaMemcpy(d_ranges, ranges, 4 * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_indicesOfMutVars, indicesOfMutVars, 2 * sizeof(int), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_initialConditions, initialConditions, amountOfInitialConditions * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_values, values, amountOfValues * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+
+	size_t amountOfIteration = (size_t)ceil((double)(nPts * nPts) / (double)nPtsLimiter);
+
+
+	std::ofstream outFileStream;
+	outFileStream.open(OUT_FILE_PATH);
+
+	int stringCounter = 0; 
+
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_tMax, &tMax, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_nPts, &nPts, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_h, &h, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfInitialConditions, &amountOfInitialConditions, sizeof(int)));
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_writableVar, &writableVar, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_maxValue, &maxValue, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_transientTime, &transientTime, sizeof(double)));
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfValues, &amountOfValues, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_preScaller, &preScaller, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_eps, &eps, sizeof(double)));
+	
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsInBlock, &amountOfPointsInBlock, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_originalNPtsLimiter, &originalNPtsLimiter, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsForSkip, &amountOfPointsForSkip, sizeof(int)));
+
+	int dimension = 2;
+	gpuErrorCheck(cudaMemcpyToSymbol(d_dimension, &dimension, sizeof(int)));
+
+
+	for (int i = 0; i < amountOfIteration; ++i)
+	{
+
+		if (i == amountOfIteration - 1)
+			nPtsLimiter = (nPts * nPts) - (nPtsLimiter * i);
+
+		int blockSize;			// Переменная для хранения размера блока
+		int minGridSize;		// Переменная для хранения минимального размера сетки
+		int gridSize;			// Переменная для хранения сетки
+
+		blockSize = 20000 / ((amountOfInitialConditions + amountOfValues) * sizeof(double));
+
+		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
+
+		int calculatedPoints = i * originalNPtsLimiter;
+		gpuErrorCheck(cudaMemcpyToSymbol(d_nPtsLimiter, &nPtsLimiter, sizeof(int)));
+		gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalculatedPoints, &calculatedPoints, sizeof(int)));
+
+		calculateDiscreteModelCUDA << <gridSize, blockSize, (amountOfInitialConditions + amountOfValues) * sizeof(double) * blockSize >> >(
+						d_ranges,
+						d_indicesOfMutVars,
+						d_initialConditions,
+						d_values,
+						d_data,
+						d_amountOfPeaks);
+
+		gpuGlobalErrorCheck();
+
+		gpuErrorCheck(cudaDeviceSynchronize());
+
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, peakFinderCUDA, 0, nPtsLimiter);
+		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
+
+		peakFinderCUDA << <gridSize, blockSize >> >
+			(	d_data,					
+				d_amountOfPeaks,			
+				d_data,						
+				d_intervals,				
+				h * (double)preScaller);	
+
+		gpuGlobalErrorCheck();
+
+		gpuErrorCheck(cudaDeviceSynchronize());
+
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, dbscanCUDA, 0, nPtsLimiter);
+		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
+
+		dbscanCUDA << <gridSize, blockSize >> > (	
+				d_data,
+				amountOfPointsInBlock,
+				nPtsLimiter,
+				d_amountOfPeaks,
+				d_intervals,
+				d_helpfulArray,
+				eps,
+				d_dbscanResult);
+
+		gpuGlobalErrorCheck();
+		gpuErrorCheck(cudaDeviceSynchronize());
+
+		gpuErrorCheck(cudaMemcpy(h_dbscanResult, d_dbscanResult, nPtsLimiter * sizeof(int), cudaMemcpyKind::cudaMemcpyDeviceToHost));
+
+		outFileStream << std::setprecision(12);
+
+		for (size_t i = 0; i < nPtsLimiter; ++i)
+			if (outFileStream.is_open())
+			{
+				if (stringCounter != 0)
+					outFileStream << ", ";
+				if (stringCounter == nPts)
+				{
+					outFileStream << "\n";
+					stringCounter = 0;
+				}
+				outFileStream << h_dbscanResult[i];
+				++stringCounter;
+			}
+			else
+			{
+				exit(1);
+			}
+	}
+
+
+	gpuErrorCheck(cudaFree(d_data));
+	gpuErrorCheck(cudaFree(d_ranges));
+	gpuErrorCheck(cudaFree(d_indicesOfMutVars));
+	gpuErrorCheck(cudaFree(d_initialConditions));
+	gpuErrorCheck(cudaFree(d_values));
+
+	gpuErrorCheck(cudaFree(d_amountOfPeaks));
+	gpuErrorCheck(cudaFree(d_intervals));
+	gpuErrorCheck(cudaFree(d_dbscanResult));
+	gpuErrorCheck(cudaFree(d_helpfulArray));
+
+	delete[] h_dbscanResult;
+}
+
+
 
 __global__ void calculateDiscreteModelCUDA(
-	const int		nPts, 
-	const int		nPtsLimiter, 
-	const int		sizeOfBlock, 
-	const int		amountOfCalculatedPoints, 
-	const int		amountOfPointsForSkip,
-	const int		dimension, 
 	double*			ranges, 
-	const double	h,
 	int*			indicesOfMutVars, 
 	double*			initialConditions,
-	const int		amountOfInitialConditions, 
 	const double*	values, 
-	const int		amountOfValues,
-	const int		amountOfIterations, 
-	const int		preScaller,
-	const int		writableVar, 
-	const double	maxValue, 
 	double*			data, 
 	int*			maxValueCheckerArray)
 {
-	// --- ����� ������ � ������ ������ ����� ---
-	// --- �������� ������: ---
-	// --- {localX_0, localX_1, localX_2, ..., localValues_0, localValues_1, ..., ��������� �����...} ---
 	extern __shared__ double s[];
 
-	// --- � ������ ������ ������� ��������� �� ��������� � ����������, ����� �������� � ���� ��� � ��������� ---
-	double* localX = s + ( threadIdx.x * amountOfInitialConditions );
-	double* localValues = s + ( blockDim.x * amountOfInitialConditions ) + ( threadIdx.x * amountOfValues );
+	double* localX = s + ( threadIdx.x * d_amountOfInitialConditions );
+	double* localValues = s + ( blockDim.x * d_amountOfInitialConditions ) + ( threadIdx.x * d_amountOfValues );
 
-	// --- ��������� ������ ������, � ������� ��������� � ����� ������ ---
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if (idx >= nPtsLimiter)		// ���� ���������� ����� � ������� ��������, ��� ��������� - ����� ��������� ���
-		return;
+	if (idx >= d_nPtsLimiter)		
+			return;
 
-	// --- ���������� localX[] ���������� ��������� ---
-	for ( int i = 0; i < amountOfInitialConditions; ++i )
+	for ( int i = 0; i < d_amountOfInitialConditions; ++i )
 		localX[i] = initialConditions[i];
 
-	// --- ���������� localValues[] ���������� ����������� ---
-	for (int i = 0; i < amountOfValues; ++i)
+	for (int i = 0; i < d_amountOfValues; ++i)
 		localValues[i] = values[i];
 
-	// --- ������ �������� ���������� ���������� �� ��������� ������� getValueByIdx ---
-	for (int i = 0; i < dimension; ++i)
-		localValues[indicesOfMutVars[i]] = getValueByIdx(amountOfCalculatedPoints + idx, 
-			nPts, ranges[i * 2], ranges[i * 2 + 1], i);
+	for (int i = 0; i < d_dimension; ++i)
+		localValues[indicesOfMutVars[i]] = getValueByIdx(d_amountOfCalculatedPoints + idx, 
+			d_nPts, ranges[i * 2], ranges[i * 2 + 1], i);
 
+	int flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsForSkip,
+		d_amountOfInitialConditions, d_preScaller, d_writableVar, d_maxValue, nullptr, idx * d_amountOfPointsInBlock, 1);
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// --- ��������� ������� amountOfPointsForSkip ��� ( ��� ��������� transientTime ) --- 
-
-
-	// 1 - stability, 0 - fixed point, -1 - unbound solution
-	int flag = loopCalculateDiscreteModel_int(localX, localValues, h, amountOfPointsForSkip,
-		amountOfInitialConditions, preScaller, writableVar, maxValue, nullptr, idx * sizeOfBlock, 1);
-
-	// --- ������ ��� ��-��������� ���������� ������� --- 
 	if (flag == 1)
-		flag = loopCalculateDiscreteModel_int(localX, localValues, h, amountOfIterations,
-			amountOfInitialConditions, preScaller, writableVar, maxValue, data, idx * sizeOfBlock, 1);
+		flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsInBlock,
+			d_amountOfInitialConditions, d_preScaller, d_writableVar, d_maxValue, data, idx * d_amountOfPointsInBlock, 1);
 
-	// --- ���� ������� ������������� ������ false - ������ �� ���� �� ����� �������� �� ��� ������� � ���������� ������� ---
 
 	if (maxValueCheckerArray != nullptr) {
 		maxValueCheckerArray[idx] = flag;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	return;
 }
 
-__global__ void peakFinderCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks, 
-	int* amountOfPeaks, double* outPeaks, double* timeOfPeaks, double h)
+__global__ void peakFinderCUDA(
+    double* data, 
+    int* amountOfPeaks, 
+    double* outPeaks, 
+    double* timeOfPeaks, 
+    double h)
 {
-	// --- ��������� ������ ������, � ������� ��������� � ����� ������ ---
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if ( idx >= amountOfBlocks )		// ���� ���������� ����� � ������� ��������, ��� ��������� - ����� ��������� ���
+	if (idx >= d_nPtsLimiter)
 		return;
 
-	// --- ���� �� ���������� ������ ������� ��� �������� ��� "�����������", �� ���������� �� ---
-	if ( amountOfPeaks[idx] == -1 )
-	{
+	if (amountOfPeaks[idx] == -1) {
 		amountOfPeaks[idx] = -1;
 		return;
 	}
 
-	// --- ���� �� ���������� ������ ������� ��� �������� ��� "�����������", �� ���������� �� ---
-	if (amountOfPeaks[idx] == 0)
-	{
+	if (amountOfPeaks[idx] == 0) {
 		amountOfPeaks[idx] = 0;
 		return;
 	}
 
-		amountOfPeaks[idx] = peakFinder( data, idx * sizeOfBlock, sizeOfBlock, outPeaks, timeOfPeaks, h );
+	amountOfPeaks[idx] = peakFinder(data, idx * d_amountOfPointsInBlock, d_amountOfPointsInBlock, outPeaks, timeOfPeaks, h);
 	return;
 }
 
-__global__ void dbscanCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks,
-	const int* amountOfPeaks, double* intervals, double* helpfulArray,
-	const double eps, int* outData)
+__global__ void dbscanCUDA(
+    double* data, 
+    const int sizeOfBlock, 
+    const int amountOfBlocks,
+    const int* amountOfPeaks, 
+    double* intervals, 
+    double* helpfulArray,
+    const double eps, 
+    int* outData)
 {
-	// --- ��������� ������ ������, � ������� ��������� � ����� ������ ---
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-	if (idx >= amountOfBlocks)		// ���� ���������� ����� � ������� ��������, ��� ��������� - ����� ��������� ���
+	if (idx >= amountOfBlocks)
 		return;
 
-	//outData[idx] = idx;
-	//return;
-
-	// --- ���� �� ���������� ������ ������� ��� �������� ��� "�����������", �� ���������� �� ---
-	if (amountOfPeaks[idx] == -1)
-	{
+	if (amountOfPeaks[idx] == -1) {
 		outData[idx] = -1;
 		return;
 	}
 
-	if (amountOfPeaks[idx] == 0)
-	{
+	if (amountOfPeaks[idx] == 0) {
 		outData[idx] = 0;
 		return;
 	}
 
-	// --- ��������� �������� dbscan � ������ �������
-	outData[idx] = dbscan(data, intervals, helpfulArray, idx * sizeOfBlock, amountOfPeaks[idx], sizeOfBlock, 
-		idx, eps, outData);
+	outData[idx] = dbscan(data, intervals, helpfulArray, idx * sizeOfBlock, amountOfPeaks[idx], sizeOfBlock, idx, eps, outData);
 }
 
-__device__ __host__ double getValueByIdx(const int idx, const int nPts,
-	const double startRange, const double finishRange, const int valueNumber)
+__device__ __host__ double getValueByIdx(
+    const int idx, 
+    const int nPts,
+    const double startRange, 
+    const double finishRange, 
+    const int valueNumber)
 {
-	return startRange + ( ( (int)( (int)idx / pow( (double)nPts, (double)valueNumber) ) % nPts )* ( (double)( finishRange - startRange ) / (double)( nPts - 1 ) ) );
+	return startRange + (((int)((int)idx / pow((double)nPts, (double)valueNumber)) % nPts) * 
+	       ((double)(finishRange - startRange) / (double)(nPts - 1)));
 }
 
 __device__ int loopCalculateDiscreteModel_int(
-	double* x, 
-	const double* values,
-	const double h, 
-	const int amountOfIterations, 
-	const int amountOfX, 
-	const int preScaller,
-	int writableVar, 
-	const double maxValue, 
-	double* data,
-	const int startDataIndex, 
-	const int writeStep)
+    double* x, 
+    const double* values,
+    const double h, 
+    const int amountOfIterations, 
+    const int amountOfX, 
+    const int preScaller,
+    int writableVar, 
+    const double maxValue, 
+    double* data,
+    const int startDataIndex, 
+    const int writeStep)
 {
 	double* xPrev = new double[amountOfX];
 
-	// --- ���������� ����, ������� ���������� ���������� �������� amountOfIterations ��� ---
-	for (int i = 0; i < amountOfIterations; ++i)
-	{
-		for (int j = 0; j < amountOfX; ++j)
-		{
+	for (int i = 0; i < amountOfIterations; ++i) {
+		for (int j = 0; j < amountOfX; ++j) {
 			xPrev[j] = x[j];
 		}
-		// --- ���� ���-���� �������� ������ ��� ������ - ���������� �������� ���������� ---
-
 
 		if (data != nullptr) 
 			data[startDataIndex + i * writeStep] = (x[writableVar]);
 		
-		// --- ���������� ������� preScaller ��� ( �� ���� ���� preScaller > 1, �� �� ��������� ( preScaller - 1 ) � ��������������� ���������� ) ---
-		//for (int j = 0; j < preScaller; ++j) {
-		//	//calculateDiscreteModel_rand(startDataIndex + i * writeStep, x, values, h);
-		//	calculateDiscreteModel(x, values, h);
-		//}
-
 		for (int j = 0; j < preScaller - 1; ++j)
 			calculateDiscreteModel(x, values, h);
 
 		calculateDiscreteModel(x, values, h);
 
-		// 1 - stability, -1 - fixed point, 0 - unbound solution
-
-		// --- ���� isnan ��� isinf - ���������� false, ��� ��� ������������� ��������� ������� ---
-		if (isnan(x[writableVar]) || isinf(x[writableVar]))
-		{
+		if (isnan(x[writableVar]) || isinf(x[writableVar])) {
 			delete[] xPrev;
 			return 0;
 		}
 
-		// --- ���� maxValue == 0, ��� ������ ������������ �� �������� �����������, ����� ��������� ��� ��������� ---
 		if (maxValue != 0)
-			if (fabsf(x[writableVar]) > maxValue)
-			{
+			if (fabsf(x[writableVar]) > maxValue) {
 				delete[] xPrev;
 				return 0;
 			}
 	}
 
-	// --- �������� �� ���������� � ����� ---
 	double tempResult = 0;
 
-	for (int j = 0; j < amountOfX; ++j)
-	{
+	for (int j = 0; j < amountOfX; ++j) {
 		tempResult += ((x[j] - xPrev[j]) * (x[j] - xPrev[j]));
-		//tempResult += abs(x[j] - xPrev[j]);
 	}
 
-
-	//if (abs(tempResult) < 1e-8)
-	if (sqrt(abs(tempResult)) < 1e-9)
-	{
+	if (sqrt(abs(tempResult)) < 1e-9) {
 		delete[] xPrev;
 		return -1;
 	}
@@ -223,7 +388,7 @@ __device__ int loopCalculateDiscreteModel_int(
 __device__ __host__ int peakFinder(double* data, const int startDataIndex, 
 	const int amountOfPoints, double* outPeaks, double* timeOfPeaks, double h)
 {
-	// --- ���������� ��� �������� ��������� ����� ---
+	// --- ��������     ---
 	int amountOfPeaks = 0;
 
 	// --- �������� ������������� �������� �������� �� ������� ����� ---
@@ -284,22 +449,12 @@ __device__ __host__ int dbscan(double* data, double* intervals, double* helpfulA
 	const int startDataIndex, const int amountOfPeaks, const int sizeOfHelpfulArray,
 	const int idx, const double eps, int* outData)
 {
-	// ------------------------------------------------------------
-	// --- ���� ����� 0 ��� 1 - ���� �� ������������ ��� ������ ---
-	// ------------------------------------------------------------
 
 	if (amountOfPeaks <= 0)
 		return 0;
 
 	if (amountOfPeaks == 1)
 		return 1;
-
-	//if (amountOfPeaks >= 3600)
-	//	return 0;
-
-
-	// ------------------------------------------------------------
-
 
 	int cluster = 0;
 	int NumNeibor = 0;
@@ -308,16 +463,9 @@ __device__ __host__ int dbscan(double* data, double* intervals, double* helpfulA
 		helpfulArray[i] = 0;
 	}
 
-	// ------------------------------------------------------------
-	//for (int i = 0; i < amountOfPeaks; i++) {
-	//	helpfulArray[startDataIndex + i] = (int)(100*sqrt(data[startDataIndex + i] * data[startDataIndex + i] + intervals[startDataIndex + i] * intervals[startDataIndex + i]));
-	//}
-
 	for (int i = 0; i < amountOfPeaks; i++) {
 		data[startDataIndex + i] = 0; 
-		//intervals[startDataIndex + i] = intervals[startDataIndex + i];
 	}
-	// ------------------------------------------------------------
 
 	for (int i = 0; i < amountOfPeaks; i++)
 		if (NumNeibor >= 1)
@@ -358,18 +506,6 @@ __device__ __host__ int dbscan(double* data, double* intervals, double* helpfulA
 
 __device__ __host__ void calculateDiscreteModel(double* X, const double* a, const double h)
 {
-	/**
-	 * here we abstract from the concept of parameter names. 
-	 * ALL parameters are numbered with indices. 
-	 * In the current example, the parameters go like this:
-	 * 
-	 * values[0] - sym
-	 * values[1] - A
-	 * values[2] - B
-	 * values[3] - C
-	 */
-
-	// --- Chameleon 02 --- 
 	double h1 = a[0] * h;
 	double h2 = (1 - a[0]) * h;
 	X[0] = X[0] + h1 * (-a[6] * X[1]);
@@ -379,32 +515,6 @@ __device__ __host__ void calculateDiscreteModel(double* X, const double* a, cons
 	X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
 	X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
 	X[0] = X[0] + h2 * (-a[6] * X[1]);
-
-	// --- RLCs-JJ ---
-	//double h1 = h * a[0];
-	//double h2 = h * (1 - a[0]);
-	//double X1;
-	//X[0] = X[0] + h1 * (X[1]);
-	//X[1] = X[1] + h1 * ((1 / a[2]) * (a[3] - ((X[1] > a[4]) ? a[5] : a[6]) * X[1] - sin(X[0]) - X[2]));
-	//X[2] = X[2] + h1 * ((1 / a[1]) * (X[1] - X[2]));
-	//
-	//X1 = X[1];
-	//	
-	//X[2] = (X[2] + h2 * (1 / a[1]) * X[1]) / (1 + h2 * (1 / a[1]));
-	//X[1] = X1 + h2 * ((1 / a[2]) * (a[3] - ((X[1] > a[4]) ? a[5] : a[6]) * X[1] - sin(X[0]) - X[2]));
-	//X[1] = X1 + h2 * ((1 / a[2]) * (a[3] - ((X[1] > a[4]) ? a[5] : a[6]) * X[1] - sin(X[0]) - X[2]));
-	//X[0] = X[0] + h2 * (X[1]);
-
-	// --- Lorenz
-	//double h1 = a[0] * h;
-	//double h2 = (1 - a[0]) * h;
-	//X[0] = X[0] + h1 * (a[1] * (X[1] - a[4] * X[0]));
-	//X[1] = X[1] + h1 * (X[0] * (a[2] - X[2]) - a[4] * X[1]);
-	//X[2] = X[2] + h1 * (X[0] * X[1] - a[4] * a[3] * X[2]);
-	//X[2] = (X[2] + h2 * (X[0] * X[1])) / (1 + h2 * a[3] * a[4]);
-	//X[1] = (X[1] + h2 * (X[0] * (a[2] - X[2]))) / (1 + h2 * a[4]);
-	//X[0] = (X[0] + h2 * (a[1] * (X[1]))) / (1 + a[1] * a[4] * h2);
-
 }
 
 __device__ __host__ double distance(double x1, double y1, double x2, double y2)
