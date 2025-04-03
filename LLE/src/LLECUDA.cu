@@ -29,7 +29,7 @@ __device__ void loopCalculateDiscreteModel(double *X, const double *a,
     #pragma unroll
     for (int i = 0; i < amountOfIterations; ++i)
     {
-        double cos_term = cos(a5 * x1);
+        double cos_term = cosf(a5 * x1);
         x0 = __fma_rn(d_h1, (-a6 * x1), x0);          // x0 += d_h1 * (-a6 * x1)
         x1 = __fma_rn(d_h1, (a6 * x0 + a1 * x2), x1); // x1 += d_h1 * (a6 * x0 + a1 * x2)
         x2 = __fma_rn(d_h1, (a2 - a3 * x2 + a4 * cos_term), x2); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)

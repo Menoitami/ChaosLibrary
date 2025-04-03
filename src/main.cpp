@@ -244,8 +244,8 @@ int main()
 
 
 	//double params[8]{ 0.5, -1, 3, 1, -1, -1, 1, 1.54 };
-	//double params[8]{ 0.5, -1, 3, 1, -1, -1, 1, 1.53 };
-	//double init[3]{ 1, 2, 0};
+	// double params[8]{ 0.5, -1, 3, 1, -1, -1, 1, 1.53 };
+	// double init[3]{ 1, 2, 0};
 
 	//basinsOfAttraction_2(
 	//		500,							//const double	tMax,						// Время моделирования системы
@@ -265,23 +265,23 @@ int main()
 	//		"D:\\CUDAresults\\Basins_Sprott_1.csv"	//std::string		OUT_FILE_PATH
 	//);
 
-	//		bifurcation2D(
-	//		500, // const double tMax,
-	//		800, // const int nPts,
-	//		0.01, // const double h,
-	//		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
-	//		init, // const double* initialConditions,
-	//		new double[4]{ -50, 50, -100, 100 }, // const double* ranges,
-	//		new int[2]{ 6, 7 }, // const int* indicesOfMutVars,
-	//		0, // const int writableVar,
-	//		10000, // const double maxValue,
-	//		2000, // const double transientTime,
-	//		params, // const double* values,
-	//		sizeof(params) / sizeof(double), // const int amountOfValues,
-	//		1, // const int preScaller,
-	//		0.05, //eps
-	//		"D:\\CUDAresults\\Bif2D_BoSangNS_3_7_01.csv"
-	//);
+	// old_library::bifurcation2D(
+	// 		300, // const double tMax,
+	// 		200, // const int nPts,
+	// 		0.01, // const double h,
+	// 		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
+	// 		init, // const double* initialConditions,
+	// 		new double[4]{ -50, 50, -100, 100 }, // const double* ranges,
+	// 		new int[2]{ 6, 7 }, // const int* indicesOfMutVars,
+	// 		0, // const int writableVar,
+	// 		10000, // const double maxValue,
+	// 		2000, // const double transientTime,
+	// 		params, // const double* values,
+	// 		sizeof(params) / sizeof(double), // const int amountOfValues,
+	// 		1, // const int preScaller,
+	// 		0.05, //eps
+	// 		std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_diagram_debri.csv"  // Используем BIFURCATION_OUTPUT_PATH
+	// );
 
 	//double params[6]{ 0.5, 3, 2.7, 4.7, 2, 9 };
 	//double init[3]{ 1, 1, 0};
@@ -491,24 +491,24 @@ double CT = 10000;
 
 
 
-//	bifurcation2D(
-//		700, // const double tMax,
-//		300, // const int nPts,
-//		h, // const double h,
-//		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
-//		init, // const double* initialConditions,
-//		//new double[4]{ -5, 5, -5, 5 }, // const double* ranges,
-//		new double[4]{ 0, 5, 0, 20 }, // const double* ranges,
-//		new int[2]{ 3, 5 }, // const int* indicesOfMutVars,
-//		0, // const int writableVar,
-//		10000, // const double maxValue,
-//		5000, // const double transientTime,
-//		params, // const double* values,
-//		sizeof(params) / sizeof(double), // const int amountOfValues,
-//		1, // const int preScaller,
-//		0.001, //eps
-//		"D:\\CUDAresults\\Bif2D_chameleon02_3_5.csv"
-//	);
+	Bifurcation::bifurcation2D(
+		400, // const double tMax,
+		100, // const int nPts,
+		h, // const double h,
+		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
+		init, // const double* initialConditions,
+		//new double[4]{ -5, 5, -5, 5 }, // const double* ranges,
+		new double[4]{ 0, 5, 0, 20 }, // const double* ranges,
+		new int[2]{ 3, 5 }, // const int* indicesOfMutVars,
+		0, // const int writableVar,
+		10000, // const double maxValue,
+		5000, // const double transientTime,
+		params, // const double* values,
+		sizeof(params) / sizeof(double), // const int amountOfValues,
+		1, // const int preScaller,
+		0.001, //eps
+		std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_diagram_ChaosLibrary_scale_100.csv"
+	);
 
 //LS1D(
 //	1000,			//const double tMax,
@@ -529,21 +529,21 @@ double CT = 10000;
 //);
 //	new double[4]{ 0, 5, 0, 20 },
 
-	printf("Start_func\n");
-	LLE_constants::LLE2D(
-			500,		//const double tMax,
-			0.5,		//const double NT,
-			h,			//const double h,
-			1e-6,		//eps
-			1000,		//const trans time,
-			init,		// init
-			3,		//ammount inti,
-			params,	//params
-			7,	// amount params,
-			new double[3] {0,5,100},
-			new double[3] {0,20,100},
-			new int[2]{ 3, 5 },		
-			"LLE2D_my.csv");
+	// printf("Start_func\n");
+	// LLE_constants::LLE2D(
+	// 		500,		//const double tMax,
+	// 		0.5,		//const double NT,
+	// 		h,			//const double h,
+	// 		1e-6,		//eps
+	// 		1000,		//const trans time,
+	// 		init,		// init
+	// 		3,		//ammount inti,
+	// 		params,	//params
+	// 		7,	// amount params,
+	// 		new double[3] {0,5,100},
+	// 		new double[3] {0,20,100},
+	// 		new int[2]{ 3, 5 },		
+	// 		"LLE2D_my.csv");
 	
 		// old_library::LLE2D(
 		// 	500,		//const double tMax,

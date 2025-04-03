@@ -30,7 +30,7 @@ add_library(debri STATIC ${SOURCES})
 
 target_link_libraries(debri PRIVATE  ${CUDA_LIBRARIES})
 #target_link_options(debri PRIVATE /NODEFAULTLIB:LIBCMT)
-set_target_properties(CudaBifurcation PROPERTIES
+set_target_properties(debri PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib # Для статических библиотек
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib # Для динамических библиотек (если понадобится SHARED)
 )
