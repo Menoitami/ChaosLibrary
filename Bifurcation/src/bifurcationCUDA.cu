@@ -326,8 +326,18 @@ __device__ double getValueByIdx(
     const double finishRange, 
     const int valueNumber)
 {
-	return startRange + (((int)((int)idx / pow((double)nPts, (double)valueNumber)) % nPts) * 
-	       ((double)(finishRange - startRange) / (double)(nPts - 1)));
+    // Предварительно вычисляем степень
+    double divisor;
+    switch(valueNumber) {
+        case 0: divisor = 1.0; break;
+        case 1: divisor = nPts; break;
+        case 2: divisor = nPts * nPts; break;
+        default: divisor = __powf(nPts, valueNumber);
+    }
+    
+    int normalizedIdx = (idx / (int)divisor) % nPts;
+    double scale = (finishRange - startRange) / (nPts - 1);
+    return startRange + normalizedIdx * scale;
 }
 
 __device__ int loopCalculateDiscreteModel_int(

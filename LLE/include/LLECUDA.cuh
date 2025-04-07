@@ -1,18 +1,18 @@
 #ifndef LLECUDA_CUH
 #define LLECUDA_CUH
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "cudaMacros.cuh"
+
 #include <iomanip>
 #include <string>
+
 const int size_params = 8;
 
-struct Calc_block{
-double init[size_params];
-double params[size_params];
-double result[size_params];
-};
-namespace LLE_constants{
+namespace LLE_constants {
+
+// Константы CUDA для GPU
 __constant__ double d_tMax;
 __constant__ double d_transTime;
 __constant__ double d_h;
@@ -39,41 +39,58 @@ __device__ int d_progress;
 __constant__ double d_h1;
 __constant__ double d_h2;
 
-__device__ void calculateDiscreteModel(double *x, const double *a, const double h);
-
-__device__ void loopCalculateDiscreteModel(double *X, const double *a,
-                                                    const int amountOfIterations);
+// Функции CUDA-ядер
+__global__ void calculateTransTime(
+    double* X,
+    double* params,
+    const double* paramLinspaceA,
+    const double* paramLinspaceB,
+    double* semi_result
+);
 
 __global__ void calculateSystem(
-	double* X,
+    double* X,
     double* params,
-	const double *paramLinspaceA,
-	const double *paramLinspaceB,
-    double **result
+    const double* paramLinspaceA,
+    const double* paramLinspaceB,
+    double* semi_result,
+    double** result
 );
 
-__global__ void calculateBlocks(
-	Calc_block ***calculatedBlocks,
-	double **result
+// Device функции
+__device__ void loopCalculateDiscreteModel(
+    double *X,
+    const double *a,
+    const int amountOfIterations
 );
 
+__device__ void calculateDiscreteModel(
+    double *x,
+    const double *a,
+    const double h
+);
+
+// Host функции
+__host__ double* linspace(double start, double end, int num);
 
 __host__ void LLE2D(
 	const double tMax,
 	const double NT,
+	const int nPts,
 	const double h,
 	const double eps,
-	const double transientTime,
 	const double* initialConditions,
-	const int amount_init,
-	const double* params,
-	const int amount_params,
-	const double* linspaceA_params,
-	const double* linspaceB_params,
+	const int amountOfInitialConditions,
+	const double* ranges,
 	const int* indicesOfMutVars,
-	std::string		OUT_FILE_PATH);
+	const int writableVar,
+	const double maxValue,
+	const double transientTime,
+	const double* values,
+	const int amountOfValues,
+	std::string		OUT_FILE_PATH
+);
 
-}
+} // namespace LLE_constants
 
-
-#endif
+#endif // LLECUDA_CUH

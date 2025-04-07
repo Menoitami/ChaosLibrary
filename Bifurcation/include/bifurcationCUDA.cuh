@@ -41,7 +41,7 @@ __global__ void peakFinderCUDA(double* data,
 __global__ void dbscanCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks,
 	const int* amountOfPeaks, double* intervals, double* helpfulArray,
 	const double eps, int* outData);
-__device__ __host__ double getValueByIdx(const int idx, const int nPts,
+__device__ double getValueByIdx(const int idx, const int nPts,
 	const double startRange, const double finishRange, const int valueNumber);
 
     

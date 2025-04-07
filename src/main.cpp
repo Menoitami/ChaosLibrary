@@ -1,4 +1,5 @@
 #include "bifurcationHOST.h"
+#include "LLEHost.h"
 #include "hostLibrary.cuh"
 #include "LLECUDA.cuh"
 #include <iostream>
@@ -380,7 +381,7 @@ int main()
 double params[7]{ 0.5, 3, 0, 2, 1, 18, 1 };
 //double params[6]{ 0.5, 3, -1, 1, 1, 1.53 };
 double init[3]{ 3, 3, 0 };
-double h = (double)0.1;
+double h = (double)0.01;
 double TT = 500000;
 double CT = 10000;
 
@@ -491,24 +492,24 @@ double CT = 10000;
 
 
 
-	Bifurcation::bifurcation2D(
-		400, // const double tMax,
-		100, // const int nPts,
-		h, // const double h,
-		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
-		init, // const double* initialConditions,
-		//new double[4]{ -5, 5, -5, 5 }, // const double* ranges,
-		new double[4]{ 0, 5, 0, 20 }, // const double* ranges,
-		new int[2]{ 3, 5 }, // const int* indicesOfMutVars,
-		0, // const int writableVar,
-		10000, // const double maxValue,
-		5000, // const double transientTime,
-		params, // const double* values,
-		sizeof(params) / sizeof(double), // const int amountOfValues,
-		1, // const int preScaller,
-		0.001, //eps
-		std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_1.csv"
-	);
+	// Bifurcation::bifurcation2D(
+	// 	400, // const double tMax,
+	// 	1000, // const int nPts,
+	// 	h, // const double h,
+	// 	sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
+	// 	init, // const double* initialConditions,
+	// 	//new double[4]{ -5, 5, -5, 5 }, // const double* ranges,
+	// 	new double[4]{ 0, 5, 0, 20 }, // const double* ranges,
+	// 	new int[2]{ 3, 5 }, // const int* indicesOfMutVars,
+	// 	0, // const int writableVar,
+	// 	10000, // const double maxValue,
+	// 	5000, // const double transientTime,
+	// 	params, // const double* values,
+	// 	sizeof(params) / sizeof(double), // const int amountOfValues,
+	// 	1, // const int preScaller,
+	// 	0.001, //eps
+	// 	std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_1.csv"
+	// );
 
 //LS1D(
 //	1000,			//const double tMax,
@@ -545,23 +546,23 @@ double CT = 10000;
 	// 		new int[2]{ 3, 5 },		
 	// 		"LLE2D_my.csv");
 	
-		// old_library::LLE2D(
-		// 	500,		//const double tMax,
-		// 	0.5,		//const double NT,
-		// 	100,		//const int nPts,
-		// 	h,			//const double h,
-		// 	1e-6,		//const double eps,
-		// 	init,		//const double* initialConditions,
-		// 	sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
-		// 	new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
-		// 	new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
-		// 	0,			//const int writableVar,
-		// 	10000,		//const double maxValue,
-		// 	1000,		//const double transientTime,
-		// 	params,		//const double* values,
-		// 	sizeof(params) / sizeof(double),	//const int amountOfValues,
-		// 	"LLE2D_master.csv"
-		// );
+		old_library::LLE2D(
+			500,		//const double tMax,
+			0.5,		//const double NT,
+			100,		//const int nPts,
+			h,			//const double h,
+			1e-6,		//const double eps,
+			init,		//const double* initialConditions,
+			sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
+			new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
+			new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
+			0,			//const int writableVar,
+			10000,		//const double maxValue,
+			1000,		//const double transientTime,
+			params,		//const double* values,
+			sizeof(params) / sizeof(double),	//const int amountOfValues,
+			std::string(LLE_OUTPUT_PATH) + "/lle_1.csv"
+		);
 
 		//printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
 
@@ -585,23 +586,23 @@ double CT = 10000;
 // 			sizeof(params) / sizeof(double),	//const int amountOfValues,
 // 			"LLE2D_chameleon02_3_5_TT300000_4.csv"
 // 	);
-		//LLE2D(
-		//	5000,		//const double tMax,
-		//	0.5,		//const double NT,
-		//	800,		//const int nPts,
-		//	h,			//const double h,
-		//	1e-6,		//const double eps,
-		//	init,		//const double* initialConditions,
-		//	sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
-		//	new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
-		//	new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
-		//	0,			//const int writableVar,
-		//	10000,		//const double maxValue,
-		//	300000,		//const double transientTime,
-		//	params,		//const double* values,
-		//	sizeof(params) / sizeof(double),	//const int amountOfValues,
-		//	"D:\\CUDAresults\\LLE2D_chameleon02_3_5_TT300000_4.csv"
-		//);
+		// old_library::LLE2D(
+		// 	100,		//const double tMax,
+		// 	0.5,		//const double NT,
+		// 	100,		//const int nPts,
+		// 	h,			//const double h,
+		// 	1e-6,		//const double eps,
+		// 	init,		//const double* initialConditions,
+		// 	sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
+		// 	new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
+		// 	new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
+		// 	0,			//const int writableVar,
+		// 	10000,		//const double maxValue,
+		// 	300000,		//const double transientTime,
+		// 	params,		//const double* values,
+		// 	sizeof(params) / sizeof(double),	//const int amountOfValues,
+		// 	std::string(LLE_OUTPUT_PATH) + "/lle_1.csv"
+		// );
 
 
 	//basinsOfAttraction_2(
