@@ -380,7 +380,7 @@ int main()
 double params[7]{ 0.5, 3, 0, 2, 1, 18, 1 };
 //double params[6]{ 0.5, 3, -1, 1, 1, 1.53 };
 double init[3]{ 3, 3, 0 };
-double h = (double)0.01;
+double h = (double)0.1;
 double TT = 500000;
 double CT = 10000;
 
@@ -493,7 +493,7 @@ double CT = 10000;
 
 	Bifurcation::bifurcation2D(
 		400, // const double tMax,
-		50, // const int nPts,
+		100, // const int nPts,
 		h, // const double h,
 		sizeof(init) / sizeof(double), // const int amountOfInitialConditions,
 		init, // const double* initialConditions,

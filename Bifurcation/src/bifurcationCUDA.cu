@@ -252,11 +252,11 @@ __global__ void calculateDiscreteModelCUDA(
 			d_nPts, ranges[i * 2], ranges[i * 2 + 1], i);
 
 	int flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsForSkip,
-		d_amountOfInitialConditions, d_preScaller, d_writableVar, d_maxValue, nullptr, idx * d_amountOfPointsInBlock, 1);
+		d_amountOfInitialConditions, d_writableVar, d_maxValue, nullptr, idx * d_amountOfPointsInBlock);
 
 	if (flag == 1)
 		flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsInBlock,
-			d_amountOfInitialConditions, d_preScaller, d_writableVar, d_maxValue, data, idx * d_amountOfPointsInBlock, 1);
+			d_amountOfInitialConditions, d_writableVar, d_maxValue, data, idx * d_amountOfPointsInBlock);
 
 
 	if (maxValueCheckerArray != nullptr) {
@@ -319,7 +319,7 @@ __global__ void dbscanCUDA(
 	outData[idx] = dbscan(data, intervals, helpfulArray, idx * sizeOfBlock, amountOfPeaks[idx], sizeOfBlock, idx, eps, outData);
 }
 
-__device__ __host__ double getValueByIdx(
+__device__ double getValueByIdx(
     const int idx, 
     const int nPts,
     const double startRange, 
@@ -336,14 +336,13 @@ __device__ int loopCalculateDiscreteModel_int(
     const double h, 
     const int amountOfIterations, 
     const int amountOfX, 
-    const int preScaller,
     int writableVar, 
     const double maxValue, 
     double* data,
-    const int startDataIndex, 
-    const int writeStep)
+    const int startDataIndex)
 {
-	double* xPrev = new double[amountOfX];
+	const int MAX_REG_SIZE = 12;
+	double xPrev[MAX_REG_SIZE];
 
 	for (int i = 0; i < amountOfIterations; ++i) {
 		for (int j = 0; j < amountOfX; ++j) {
@@ -351,21 +350,17 @@ __device__ int loopCalculateDiscreteModel_int(
 		}
 
 		if (data != nullptr) 
-			data[startDataIndex + i * writeStep] = (x[writableVar]);
-		
-		for (int j = 0; j < preScaller - 1; ++j)
-			calculateDiscreteModel(x, values, h);
+			data[startDataIndex + i] = (x[writableVar]);
 
 		calculateDiscreteModel(x, values, h);
 
-		if (isnan(x[writableVar]) || isinf(x[writableVar])) {
-			delete[] xPrev;
+		double val = x[writableVar];
+		if (val != val || val == val + 1.0) {
 			return 0;
 		}
 
 		if (maxValue != 0)
 			if (fabsf(x[writableVar]) > maxValue) {
-				delete[] xPrev;
 				return 0;
 			}
 	}
@@ -376,65 +371,50 @@ __device__ int loopCalculateDiscreteModel_int(
 		tempResult += ((x[j] - xPrev[j]) * (x[j] - xPrev[j]));
 	}
 
-	if (sqrt(abs(tempResult)) < 1e-9) {
-		delete[] xPrev;
+	if (sqrtf(fabsf(tempResult)) < 1e-9) {
 		return -1;
 	}
 
-	delete[] xPrev;
 	return 1;
 }
 
-__device__ __host__ int peakFinder(double* data, const int startDataIndex, 
+__device__ int peakFinder(double* data, const int startDataIndex, 
 	const int amountOfPoints, double* outPeaks, double* timeOfPeaks, double h)
 {
-	// --- ��������     ---
 	int amountOfPeaks = 0;
-
-	// --- �������� ������������� �������� �������� �� ������� ����� ---
+	
 	for ( int i = startDataIndex + 1; i < startDataIndex + amountOfPoints - 1; ++i )
 	{
-		// --- ���� ������� ����� ������ ���������� � ������ ��� ����� ���������, ��... ( �� ����, ��� ��� ��� ( ��������: 2 3 3 4 ) ) ---
-		if ( data[i] - data[i - 1] > 1e-13 && data[i] >= data[i + 1] ) //&&data[j] > 0.2
+		if ( data[i] - data[i - 1] > 1e-13 && data[i] >= data[i + 1] )
 		{
-			// --- �� ��������� ����� �������� ���� ������, ���� �� ��������� �� ����� ������ ������ ��� ������ ---
 			for ( int j = i; j < startDataIndex + amountOfPoints - 1; ++j )
 			{
-				// --- ���� ���������� �� ����� ������ ������, ������ ��� ��� �� ��� ---
 				if ( data[j] < data[j + 1] )
 				{
-					i = j + 1;	// --- ��������� ������� �������, ����� ������ �� ��������� ���� � ��� �� ��������
-					break;		// --- ������������ � �������� �����
+					i = j + 1;
+					break;
 				}
-				// --- ���� � ����, �� ����� ����� ������, ��� �������, ������ �� ����� ��� ---
-				if ( data[j] - data[j + 1] > 1e-13  ) //&&data[j] > 0.2
+				if ( data[j] - data[j + 1] > 1e-13  )
 				{
-					// --- ���� ������ outPeaks �� ����, �� ������ ������ ---
 					if ( outPeaks != nullptr )
 						outPeaks[startDataIndex + amountOfPeaks] = data[j];
-					// --- ���� ������ timeOfPeaks �� ����, �� ������ ������ ---
 					if ( timeOfPeaks != nullptr )
-						timeOfPeaks[startDataIndex + amountOfPeaks] = trunc( ( (double)j + (double)i ) / (double)2 );	// �������� ������ ���������� ����� j � i
+						timeOfPeaks[startDataIndex + amountOfPeaks] = trunc( ( (double)j + (double)i ) / (double)2 );
 					++amountOfPeaks;
-					i = j + 1; // ������ ��� ��������� ����� ����� �� ����� ���� ����� ( ��� ���� �� ����� ���� ������ )
+					i = j + 1;
 					break;
 				}
 			}
 		}
 	}
-	// --- ��������� ���������� ��������� ---
 	if ( amountOfPeaks > 1 ) {
-		// --- ����������� �� ���� ��������� ����� � �� �������� ---
 		for ( size_t i = 0; i < amountOfPeaks - 1; i++ )
 		{
-			// --- ������� ��� ���� �� ���� ������ �����, � ������ ��� ������� ---
 			if ( outPeaks != nullptr )
 				outPeaks[startDataIndex + i] = outPeaks[startDataIndex + i + 1];
-			// --- ��������� ���������� ��������. ��� ������� ������� ���������� ����� � �����������, ���������� �� ��� ---
 			if ( timeOfPeaks != nullptr )
 				timeOfPeaks[startDataIndex + i] = (double)( timeOfPeaks[startDataIndex + i + 1] - timeOfPeaks[startDataIndex + i] ) * h;
 		}
-		// --- ��� ��� ���� ��� ������� - �������� ������� �� ���������� ---
 		amountOfPeaks = amountOfPeaks - 1;
 	}
 	else {
@@ -445,7 +425,7 @@ __device__ __host__ int peakFinder(double* data, const int startDataIndex,
 	return amountOfPeaks;
 }
 
-__device__ __host__ int dbscan(double* data, double* intervals, double* helpfulArray, 
+__device__ int dbscan(double* data, double* intervals, double* helpfulArray, 
 	const int startDataIndex, const int amountOfPeaks, const int sizeOfHelpfulArray,
 	const int idx, const double eps, int* outData)
 {
@@ -504,20 +484,25 @@ __device__ __host__ int dbscan(double* data, double* intervals, double* helpfulA
 }
 
 
-__device__ __host__ void calculateDiscreteModel(double* X, const double* a, const double h)
+__device__ void calculateDiscreteModel(double* X, const double* a, const double h)
 {
 	double h1 = a[0] * h;
 	double h2 = (1 - a[0]) * h;
-	X[0] = X[0] + h1 * (-a[6] * X[1]);
-	X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
-	X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
+	double cos_term = cosf(a[5] * X[1]);
+	X[0] = __fma_rn(h1, (-a[6] * X[1]), X[0]);          // x0 += d_h1 * (-a6 * x1)
+	X[1] = __fma_rn(h1, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h1 * (a6 * x0 + a1 * x2)
+	X[2] = __fma_rn(h1, (a[2] - a[3] * X[2] + a[4] * cos_term), X[2]); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
 
-	X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
-	X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
-	X[0] = X[0] + h2 * (-a[6] * X[1]);
+	// Вычисление общего коэффициента для второй фазы
+	float inv_den = __frcp_rn(__fmaf_rn(a[3], h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
+
+	// Вторая фаза
+	X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
+	X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h2 * (a6 * x0 + a1 * x2)
+	X[0] = __fma_rn(h2, (-a[6] * X[1]), X[0]);          // x0 += d_h2 * (-a6 * x1)
 }
 
-__device__ __host__ double distance(double x1, double y1, double x2, double y2)
+__device__ double distance(double x1, double y1, double x2, double y2)
 {
 	if (x1 == x2 && y1 == y2)
 		return 0;
