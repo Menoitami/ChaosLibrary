@@ -20,7 +20,7 @@ void LLE2D(
 	const double transientTime,
 	const double* values,
 	const int amountOfValues,
-	std::string		OUT_FILE_PATH)
+	std::string OUT_FILE_PATH)
 {
     LLE_constants::LLE2D(
         tMax,
@@ -38,8 +38,7 @@ void LLE2D(
         values,
         amountOfValues,
         OUT_FILE_PATH
-        );
-
+    );
 }
 
-} // namespace LLE_constants 
+} // namespace LLE 

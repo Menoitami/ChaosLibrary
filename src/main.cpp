@@ -545,25 +545,25 @@ double CT = 10000;
 	// 		new double[3] {0,20,100},
 	// 		new int[2]{ 3, 5 },		
 	// 		"LLE2D_my.csv");
-	
-		old_library::LLE2D(
-			500,		//const double tMax,
-			0.5,		//const double NT,
-			100,		//const int nPts,
-			h,			//const double h,
-			1e-6,		//const double eps,
-			init,		//const double* initialConditions,
-			sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
-			new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
-			new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
-			0,			//const int writableVar,
-			10000,		//const double maxValue,
-			1000,		//const double transientTime,
-			params,		//const double* values,
-			sizeof(params) / sizeof(double),	//const int amountOfValues,
-			std::string(LLE_OUTPUT_PATH) + "/lle_1.csv"
-		);
-
+	/*
+	LLE::LLE2D(
+		500,		//const double tMax,
+		0.5,		//const double NT,
+		1000,		//const int nPts,
+		h,			//const double h,
+		1e-6,		//const double eps,
+		init,		//const double* initialConditions,
+		sizeof(init) / sizeof(double),		//const int amountOfInitialConditions,
+		new double[4]{ 0, 5, 0, 20 },		//const double* ranges,
+		new int[2]{ 3, 5 },					//const int* indicesOfMutVars,
+		0,			//const int writableVar,
+		10000,		//const double maxValue,
+		1000,		//const double transientTime,
+		params,		//const double* values,
+		sizeof(params) / sizeof(double),	//const int amountOfValues,
+		std::string(LLE_OUTPUT_PATH) + "/lle_2.csv"
+	);
+*/
 		//printf(" --- Time of runnig: %zu ms", std::clock() - startTime);
 
 

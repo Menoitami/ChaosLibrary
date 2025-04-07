@@ -12,32 +12,7 @@ const int size_params = 8;
 
 namespace LLE_constants {
 
-// Константы CUDA для GPU
-__constant__ double d_tMax;
-__constant__ double d_transTime;
-__constant__ double d_h;
 
-__constant__ int d_size_linspace_A;
-__constant__ int d_size_linspace_B;
-
-__constant__ int d_amountOfTransPoints;
-__constant__ int d_amountOfNTPoints;
-__constant__ int d_amountOfAllpoints;
-__constant__ int d_amountOfCalcBlocks;
-
-__constant__ int d_Nt_steps; 
-
-__constant__ int d_paramsSize;
-__constant__ int d_XSize;
-
-__constant__ int d_idxParamA;
-__constant__ int d_idxParamB;
-__constant__ double d_eps;
-
-__device__ int d_progress; 
-
-__constant__ double d_h1;
-__constant__ double d_h2;
 
 // Функции CUDA-ядер
 __global__ void calculateTransTime(
@@ -92,5 +67,4 @@ __host__ void LLE2D(
 );
 
 } // namespace LLE_constants
-
 #endif // LLECUDA_CUH

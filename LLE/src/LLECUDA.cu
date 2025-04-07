@@ -6,7 +6,32 @@
 #include <curand_kernel.h>
 #include <cooperative_groups.h>
 namespace LLE_constants{
-	
+	// Константы CUDA для GPU
+__constant__ double d_tMax;
+__constant__ double d_transTime;
+__constant__ double d_h;
+
+__constant__ int d_size_linspace_A;
+__constant__ int d_size_linspace_B;
+
+__constant__ int d_amountOfTransPoints;
+__constant__ int d_amountOfNTPoints;
+__constant__ int d_amountOfAllpoints;
+__constant__ int d_amountOfCalcBlocks;
+
+__constant__ int d_Nt_steps; 
+
+__constant__ int d_paramsSize;
+__constant__ int d_XSize;
+
+__constant__ int d_idxParamA;
+__constant__ int d_idxParamB;
+__constant__ double d_eps;
+
+__device__ int d_progress; 
+
+__constant__ double d_h1;
+__constant__ double d_h2;
 
 
 __device__ void loopCalculateDiscreteModel(double *X, const double *a,
@@ -29,7 +54,7 @@ __device__ void loopCalculateDiscreteModel(double *X, const double *a,
     #pragma unroll
     for (int i = 0; i < amountOfIterations; ++i)
     {
-        double cos_term = cosf(a5 * x1);
+        double cos_term = cos(a5 * x1);
         x0 = __fma_rn(d_h1, (-a6 * x1), x0);          // x0 += d_h1 * (-a6 * x1)
         x1 = __fma_rn(d_h1, (a6 * x0 + a1 * x2), x1); // x1 += d_h1 * (a6 * x0 + a1 * x2)
         x2 = __fma_rn(d_h1, (a2 - a3 * x2 + a4 * cos_term), x2); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
@@ -67,7 +92,7 @@ __device__ void calculateDiscreteModel(double *X, const double *a, const double 
     // Compute in registers to avoid global memory access
     const double h1 = a0 * h;
     const double h2 = (1.0 - a0) * h;
-    const double cos_term = cosf(a5 * x1);
+    const double cos_term = cos(a5 * x1);
     
     // First phase calculation using register values
     x0 = __fma_rn(h1, (-a6 * x1), x0);
@@ -245,156 +270,242 @@ __host__ double* linspace(double start, double end, int num)
 __host__ void LLE2D(
 	const double tMax,
 	const double NT,
+	const int nPts,
 	const double h,
 	const double eps,
-	const double transientTime,
 	const double* initialConditions,
-	const int amount_init,
-	const double* params,
-	const int amount_params,
-	const double* linspaceA_params,
-	const double* linspaceB_params,
+	const int amountOfInitialConditions,
+	const double* ranges,
 	const int* indicesOfMutVars,
-	std::string		OUT_FILE_PATH)
+	const int writableVar,
+	const double maxValue,
+	const double transientTime,
+	const double* values,
+	const int amountOfValues,
+	std::string OUT_FILE_PATH)
 {
-
-	double* linspaceA = linspace(linspaceA_params[0], linspaceA_params[1], linspaceA_params[2]);
-	double* linspaceB = linspace(linspaceB_params[0], linspaceB_params[1], linspaceB_params[2]);
-
+	// Базовые параметры для расчетов
+	size_t amountOfNT_points = NT / h;
 	int amountOfNTPoints = static_cast<int>(NT / h);
 	int amountOfTransPoints= static_cast<int>(transientTime / h);
 	int amountOfAllPoints= static_cast<int>(tMax / h);
-
-	size_t freeMemory;
-	size_t totalMemory;
-
-	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));
-
-	const int size_A =  static_cast<int>(linspaceA_params[2]);
-	const int size_B =  static_cast<int>(linspaceB_params[2]);
-	int NT_steps = static_cast<int>(NT/h);
-
 	int amount_of_calc_blocks = static_cast<int>(amountOfAllPoints/amountOfNTPoints) + 1;
 
+	// Создаем линейные пространства из диапазонов
+	double* linspaceA = linspace(ranges[0], ranges[1], nPts);
+	double* linspaceB = linspace(ranges[2], ranges[3], nPts);
+
+	// Получаем информацию о доступной памяти GPU
+	size_t freeMemory;
+	size_t totalMemory;
+	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));
+
+	// Используем 95% доступной памяти
+	freeMemory *= 0.95;
+	
+	// Максимальное кол-во точек в одном блоке вычислений
+	size_t maxPointsPerSegment = (freeMemory / sizeof(double)) / 4; // Грубая оценка необходимой памяти
+	
+	// Вычисляем размер сегмента для расчетов (max - полная сетка)
+	size_t segmentSize = std::min(maxPointsPerSegment, static_cast<size_t>(nPts * nPts));
+	
+	// Вычисляем количество сегментов для обработки всей сетки
+	size_t numSegments = (nPts * nPts + segmentSize - 1) / segmentSize;
+	
+	// Открываем файл для результатов
+	std::ofstream outFileStream;
+	outFileStream.open(OUT_FILE_PATH);
+	
+	if (!outFileStream.is_open()) {
+		std::cerr << "Output file open error: " << OUT_FILE_PATH << std::endl;
+		exit(1);
+	}
+	
+	// Записываем заголовок (диапазоны)
+	outFileStream << ranges[0] << " " << ranges[1] << "\n";
+	outFileStream << ranges[2] << " " << ranges[3] << "\n";
+	
+	// Устанавливаем константы для ядер
 	gpuErrorCheck(cudaMemcpyToSymbol(d_idxParamA, &indicesOfMutVars[0], sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_idxParamB, &indicesOfMutVars[1], sizeof(int)));
-
+	
+	int size_A = nPts;
+	int size_B = nPts;
 	gpuErrorCheck(cudaMemcpyToSymbol(d_size_linspace_A, &size_A, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_size_linspace_B, &size_B, sizeof(int)));
-
+	
 	gpuErrorCheck(cudaMemcpyToSymbol(d_h, &h, sizeof(double)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_transTime, &transientTime, sizeof(double)));
+	
+	int NT_steps = static_cast<int>(NT/h);
 	gpuErrorCheck(cudaMemcpyToSymbol(d_Nt_steps, &NT_steps, sizeof(int)));
-	gpuErrorCheck(cudaMemcpyToSymbol(d_paramsSize, &amount_params, sizeof(int)));
-	gpuErrorCheck(cudaMemcpyToSymbol(d_XSize, &amount_init, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_paramsSize, &amountOfValues, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_XSize, &amountOfInitialConditions, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfNTPoints, &amountOfNTPoints, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfTransPoints, &amountOfTransPoints, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfAllpoints, &amountOfAllPoints, sizeof(int)));
-    gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalcBlocks, &amount_of_calc_blocks, sizeof(int)));
-
-    double h_h1 = params[0] * h;
-    double h_h2 = (1 - params[0]) * h;
-    gpuErrorCheck(cudaMemcpyToSymbol(d_h1, &h_h1, sizeof(double)));
-    gpuErrorCheck(cudaMemcpyToSymbol(d_h2, &h_h2, sizeof(double)));
-    gpuErrorCheck(cudaMemcpyToSymbol(d_eps, &eps, sizeof(double)));
-
-
-    int max_threads_y =  16;  
-    int max_threads_x =  16;  
-
-    int gridSizeY = (size_B+max_threads_y-1) / max_threads_y;
-    int gridSizeX =  (size_A+max_threads_x-1) / max_threads_x;
-
-
-    // Define thread block and grid dimensions
-    dim3 threadsPerBlock(max_threads_x, max_threads_y, 1); 
-    dim3 blocksPerGrid(gridSizeX, gridSizeY, 1);
-
-    size_t sharedMemSizeTrans = (max_threads_x * max_threads_y) * (amount_init + amount_init + amount_params) * sizeof(double);
-    size_t sharedMemSize = (max_threads_x * max_threads_y) * (2 * amount_init + amount_params) * sizeof(double);  // For thread pairs
-    printf("Total shared memory: %zu bytes\n", sharedMemSize);
-
-
-    double** d_result;
-    double** h_result_temp = new double*[size_A];
-    gpuErrorCheck(cudaMalloc(&d_result, size_A * sizeof(double*)));
-    for (int i = 0; i < size_A; ++i) {
-        gpuErrorCheck(cudaMalloc(&h_result_temp[i], size_B * sizeof(double)));
-        double zero = 0.0;
-
-        for (int j = 0; j < size_B; ++j) {
-            gpuErrorCheck(cudaMemcpy(h_result_temp[i] + j, &zero, sizeof(double), cudaMemcpyHostToDevice));
-        }
-    }
-    gpuErrorCheck(cudaMemcpy(d_result, h_result_temp, size_A * sizeof(double*), cudaMemcpyHostToDevice));
-
-
-    double* d_semi_result;
-    gpuErrorCheck(cudaMalloc(&d_semi_result, size_A * size_B * (2 * amount_init + amount_params) * sizeof(double)));
-
-    double* d_paramLinspaceA;
-    double* d_paramLinspaceB;
-    double* d_X;
-    double* d_params;
-
-    gpuErrorCheck(cudaMalloc(&d_X, amount_init * sizeof(double)));
-    gpuErrorCheck(cudaMalloc(&d_params, amount_params * sizeof(double)));
-    gpuErrorCheck(cudaMalloc(&d_paramLinspaceA, size_A * sizeof(double)));
-    gpuErrorCheck(cudaMalloc(&d_paramLinspaceB, size_B * sizeof(double)));
-
-    gpuErrorCheck(cudaMemcpy(d_X, initialConditions, amount_init * sizeof(double), cudaMemcpyHostToDevice));
-    gpuErrorCheck(cudaMemcpy(d_params, params, amount_params * sizeof(double), cudaMemcpyHostToDevice));
-    gpuErrorCheck(cudaMemcpy(d_paramLinspaceA, linspaceA, size_A * sizeof(double), cudaMemcpyHostToDevice));
-    gpuErrorCheck(cudaMemcpy(d_paramLinspaceB, linspaceB, size_B * sizeof(double), cudaMemcpyHostToDevice));
-
-    // Первый вызов: расчет trans_time и perturbated_X
-    LLE_constants::calculateTransTime<<<blocksPerGrid, threadsPerBlock, sharedMemSize>>>(
-        d_X,
-        d_params,
-        d_paramLinspaceA,
-        d_paramLinspaceB,
-        d_semi_result
-    );
-    gpuErrorCheck(cudaDeviceSynchronize());
-    gpuErrorCheck(cudaPeekAtLastError());
-
-    // Второй вызов: расчет системы
-    LLE_constants::calculateSystem<<<blocksPerGrid, threadsPerBlock, sharedMemSize>>>(
-        d_X,
-        d_params,
-        d_paramLinspaceA,
-        d_paramLinspaceB,
-        d_semi_result,
-        d_result
-    );
-    gpuErrorCheck(cudaDeviceSynchronize());
-    gpuErrorCheck(cudaPeekAtLastError());
-
-    printf("Calculations ended\n");
-
-    double** h_result = new double*[size_A];
-    for (int i = 0; i < size_A; ++i) {
-        h_result[i] = new double[size_B];
-        gpuErrorCheck(cudaMemcpy(h_result[i], h_result_temp[i], size_B * sizeof(double), cudaMemcpyDeviceToHost));
-    }
-
-    std::ofstream outFileStream(OUT_FILE_PATH);
-    if (outFileStream.is_open()) {
-        for (int i = 0; i < size_A; ++i) {
-            for (int j = 0; j < size_B; ++j) {
-                if (j > 0) outFileStream << ", ";
-                outFileStream << (std::isnan(h_result[i][j]) ? 0 : h_result[i][j]);
-            }
-            outFileStream << "\n";
-        }
-        outFileStream.close();
-    } else {
-        std::cerr << "Output file open error: " << OUT_FILE_PATH << std::endl;
-        exit(1);
-    }
-
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalcBlocks, &amount_of_calc_blocks, sizeof(int)));
+	
+	// Вычисляем константы для интегрирования
+	double h_h1 = values[0] * h;
+	double h_h2 = (1 - values[0]) * h;
+	gpuErrorCheck(cudaMemcpyToSymbol(d_h1, &h_h1, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_h2, &h_h2, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_eps, &eps, sizeof(double)));
+	
+	// Счетчик строк для вывода
+	int stringCounter = 0;
+	
+	// Последовательно обрабатываем каждый сегмент
+	for (size_t segmentIdx = 0; segmentIdx < numSegments; ++segmentIdx) {
+		// Вычисляем размер текущего сегмента (последний может быть меньше)
+		size_t currentSegmentSize = (segmentIdx == numSegments - 1) ? 
+			(nPts * nPts) - (segmentSize * segmentIdx) : segmentSize;
+		
+		// Определяем размерность текущего сегмента в терминах A и B
+		size_t segmentSizeA = std::min(static_cast<size_t>(nPts), currentSegmentSize);
+		size_t segmentSizeB = std::min(static_cast<size_t>(nPts), (currentSegmentSize + segmentSizeA - 1) / segmentSizeA);
+		
+		// Смещение для текущего сегмента
+		size_t offsetA = (segmentIdx * segmentSize) / nPts;
+		size_t offsetB = (segmentIdx * segmentSize) % nPts;
+		
+		// Выделяем память для результатов
+		double** d_result;
+		double** h_result_temp = new double*[segmentSizeA];
+		
+		gpuErrorCheck(cudaMalloc(&d_result, segmentSizeA * sizeof(double*)));
+		
+		for (size_t i = 0; i < segmentSizeA; ++i) {
+			gpuErrorCheck(cudaMalloc(&h_result_temp[i], segmentSizeB * sizeof(double)));
+			
+			// Инициализируем нулями
+			double zero = 0.0;
+			for (size_t j = 0; j < segmentSizeB; ++j) {
+				gpuErrorCheck(cudaMemcpy(h_result_temp[i] + j, &zero, sizeof(double), cudaMemcpyHostToDevice));
+			}
+		}
+		
+		gpuErrorCheck(cudaMemcpy(d_result, h_result_temp, segmentSizeA * sizeof(double*), cudaMemcpyHostToDevice));
+		
+		// Выделяем память для промежуточных результатов
+		double* d_semi_result;
+		size_t semi_result_size = segmentSizeA * segmentSizeB * (2 * amountOfInitialConditions + amountOfValues) * sizeof(double);
+		
+		gpuErrorCheck(cudaMalloc(&d_semi_result, semi_result_size));
+		
+		// Выделяем память для линейных пространств на GPU
+		double* d_linspaceA;
+		double* d_linspaceB;
+		
+		gpuErrorCheck(cudaMalloc(&d_linspaceA, segmentSizeA * sizeof(double)));
+		gpuErrorCheck(cudaMalloc(&d_linspaceB, segmentSizeB * sizeof(double)));
+		
+		// Копируем соответствующие части линейных пространств
+		gpuErrorCheck(cudaMemcpy(d_linspaceA, linspaceA + offsetA, segmentSizeA * sizeof(double), cudaMemcpyHostToDevice));
+		gpuErrorCheck(cudaMemcpy(d_linspaceB, linspaceB + offsetB, segmentSizeB * sizeof(double), cudaMemcpyHostToDevice));
+		
+		// Выделяем память для начальных условий и параметров
+		double* d_initialConditions;
+		double* d_values;
+		
+		gpuErrorCheck(cudaMalloc(&d_initialConditions, amountOfInitialConditions * sizeof(double)));
+		gpuErrorCheck(cudaMalloc(&d_values, amountOfValues * sizeof(double)));
+		
+		gpuErrorCheck(cudaMemcpy(d_initialConditions, initialConditions, amountOfInitialConditions * sizeof(double), cudaMemcpyHostToDevice));
+		gpuErrorCheck(cudaMemcpy(d_values, values, amountOfValues * sizeof(double), cudaMemcpyHostToDevice));
+		
+		// Определяем размеры блоков и сетки для запуска ядер
+		int max_threads_x = 16;
+		int max_threads_y = 16;
+		
+		int gridSizeX = (segmentSizeA + max_threads_x - 1) / max_threads_x;
+		int gridSizeY = (segmentSizeB + max_threads_y - 1) / max_threads_y;
+		
+		dim3 threadsPerBlock(max_threads_x, max_threads_y, 1);
+		dim3 blocksPerGrid(gridSizeX, gridSizeY, 1);
+		
+		// Вычисляем размер разделяемой памяти
+		size_t sharedMemSize = (max_threads_x * max_threads_y) * (2 * amountOfInitialConditions + amountOfValues) * sizeof(double);
+		
+		// Вызываем первое ядро - расчет переходного процесса
+		calculateTransTime<<<blocksPerGrid, threadsPerBlock, sharedMemSize>>>(
+			d_initialConditions,
+			d_values,
+			d_linspaceA,
+			d_linspaceB,
+			d_semi_result
+		);
+		
+		gpuErrorCheck(cudaDeviceSynchronize());
+		gpuErrorCheck(cudaPeekAtLastError());
+		
+		// Вызываем второе ядро - основной расчет
+		calculateSystem<<<blocksPerGrid, threadsPerBlock, sharedMemSize>>>(
+			d_initialConditions,
+			d_values,
+			d_linspaceA,
+			d_linspaceB,
+			d_semi_result,
+			d_result
+		);
+		
+		gpuErrorCheck(cudaDeviceSynchronize());
+		gpuErrorCheck(cudaPeekAtLastError());
+		
+		// Копируем результаты на хост
+		double** h_result = new double*[segmentSizeA];
+		
+		for (size_t i = 0; i < segmentSizeA; ++i) {
+			h_result[i] = new double[segmentSizeB];
+			gpuErrorCheck(cudaMemcpy(h_result[i], h_result_temp[i], segmentSizeB * sizeof(double), cudaMemcpyDeviceToHost));
+		}
+		
+		// Записываем результаты в файл - изменен порядок циклов для отражения по диагонали
+		for (size_t j = 0; j < segmentSizeB; ++j) {
+			for (size_t i = 0; i < segmentSizeA; ++i) {
+				if (stringCounter != 0) {
+					outFileStream << ", ";
+				}
+				
+				if (stringCounter == nPts) {
+					outFileStream << "\n";
+					stringCounter = 0;
+				}
+				
+				outFileStream << (std::isnan(h_result[i][j]) ? 0 : h_result[i][j]);
+				++stringCounter;
+			}
+		}
+		
+		// Освобождаем память
+		for (size_t i = 0; i < segmentSizeA; ++i) {
+			delete[] h_result[i];
+			gpuErrorCheck(cudaFree(h_result_temp[i]));
+		}
+		
+		delete[] h_result;
+		delete[] h_result_temp;
+		
+		gpuErrorCheck(cudaFree(d_result));
+		gpuErrorCheck(cudaFree(d_semi_result));
+		gpuErrorCheck(cudaFree(d_linspaceA));
+		gpuErrorCheck(cudaFree(d_linspaceB));
+		gpuErrorCheck(cudaFree(d_initialConditions));
+		gpuErrorCheck(cudaFree(d_values));
+		
+		// Печатаем прогресс
+		printf("Progress: %.2f%%\n", 100.0f * static_cast<float>(segmentIdx + 1) / static_cast<float>(numSegments));
+	}
+	
+	// Закрываем файл
+	outFileStream.close();
+	
+	// Освобождаем память
 	delete[] linspaceA;
 	delete[] linspaceB;
+	
+	printf("LLE2D calculation completed\n");
 }
 
 } //LLE_constants
