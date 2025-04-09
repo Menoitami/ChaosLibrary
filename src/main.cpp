@@ -31,30 +31,6 @@ void measureExecutionTime(Func&& func, const std::string& fileName, Args&&... ar
     std::cout << "Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
 }
 
-// Предполагаем, что old_library содержит совместимые функции
-// Если это не так, код может потребовать адаптации
-namespace old_library {
-    // Заглушки, если реальные определения недоступны в этом контексте
-    // Замените их на реальные #include, если необходимо
-    void bifurcation2D(
-        const double tMax, const int nPts, const double h,
-        const int amountOfInitialConditions, const double* initialConditions,
-        const double* ranges, const int* indicesOfMutVars, const int writableVar,
-        const double maxValue, const double transientTime,
-        const double* values, const int amountOfValues,
-        const int preScaller, const double eps,
-        std::string OUT_FILE_PATH) {}
-
-    void LLE2D(
-        const double tMax, const double NT, const int nPts, const double h, const double eps,
-        const double* initialConditions, const int amountOfInitialConditions,
-        const double* ranges, const int* indicesOfMutVars,
-        const int writableVar, const double maxValue, const double transientTime,
-        const double* values, const int amountOfValues,
-        std::string OUT_FILE_PATH) {}
-}
-
-//using namespace old_library; // Оставляем закомментированным, используем явное указание
 
 int main()
 {
