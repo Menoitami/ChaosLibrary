@@ -38,77 +38,57 @@ __device__ void loopCalculateDiscreteModel(double *X, const double *a,
                                                     const int amountOfIterations)
 {
 
-    double x0 = X[0];
-    double x1 = X[1];
-    double x2 = X[2];
-
-    // Загружаем элементы массива a в регистры
-    double a0 = a[0]; // Предполагаем, что a[0] может использоваться где-то вне видимого кода
-    double a1 = a[1];
-    double a2 = a[2];
-    double a3 = a[3];
-    double a4 = a[4];
-    double a5 = a[5];
-    double a6 = a[6];
 
     #pragma unroll
     for (int i = 0; i < amountOfIterations; ++i)
     {
-        double cos_term = cos(a5 * x1);
-        x0 = __fma_rn(d_h1, (-a6 * x1), x0);          // x0 += d_h1 * (-a6 * x1)
-        x1 = __fma_rn(d_h1, (a6 * x0 + a1 * x2), x1); // x1 += d_h1 * (a6 * x0 + a1 * x2)
-        x2 = __fma_rn(d_h1, (a2 - a3 * x2 + a4 * cos_term), x2); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
-
-        // Вычисление общего коэффициента для второй фазы
-        float inv_den = __frcp_rn(__fmaf_rn(a3, d_h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
-
-        // Вторая фаза
-        x2 = __fma_rn(d_h2, (a2 + a4 * cos_term), x2) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
-        x1 = __fma_rn(d_h2, (a6 * x0 + a1 * x2), x1); // x1 += d_h2 * (a6 * x0 + a1 * x2)
-        x0 = __fma_rn(d_h2, (-a6 * x1), x0);          // x0 += d_h2 * (-a6 * x1)
+		calculateDiscreteModel(X, a, d_h);
     }
 
-    X[0] = x0;
-    X[1] = x1;
-    X[2] = x2;
 }
 
 __device__ void calculateDiscreteModel(double *X, const double *a, const double h)
 {
-    // Copy all inputs to registers
-    const double a0 = a[0];
-    const double a1 = a[1];
-    const double a2 = a[2];
-    const double a3 = a[3];
-    const double a4 = a[4];
-    const double a5 = a[5];
-    const double a6 = a[6];
+	// double h1 = a[0] * h;
+	// double h2 = (1 - a[0]) * h;
+	// double cos_term = cosf(a[5] * X[1]);
+	// X[0] = __fma_rn(h1, (-a[6] * X[1]), X[0]);          // x0 += d_h1 * (-a6 * x1)
+	// X[1] = __fma_rn(h1, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h1 * (a6 * x0 + a1 * x2)
+	// X[2] = __fma_rn(h1, (a[2] - a[3] * X[2] + a[4] * cos_term), X[2]); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
+
+	// // Вычисление общего коэффициента для второй фазы
+	// float inv_den = __frcp_rn(__fmaf_rn(a[3], h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
+
+	// // Вторая фаза
+	// X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
+	// X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h2 * (a6 * x0 + a1 * x2)
+	// X[0] = __fma_rn(h2, (-a[6] * X[1]), X[0]);          // x0 += d_h2 * (-a6 * x1)
+
+
+    double h1 = __fma_rn(0.5, h, a[0]);
+    double h2 = __fma_rn(0.5, h, -a[0]);
     
-    // Copy X values to registers
-    double x0 = X[0];
-    double x1 = X[1];
-    double x2 = X[2];
-    
-    // Compute in registers to avoid global memory access
-    const double h1 = a0 * h;
-    const double h2 = (1.0 - a0) * h;
-    const double cos_term = cos(a5 * x1);
-    
-    // First phase calculation using register values
-    x0 = __fma_rn(h1, (-a6 * x1), x0);
-    x1 = __fma_rn(h1, (a6 * x0 + a1 * x2), x1);
-    x2 = __fma_rn(h1, (a2 - a3 * x2 + a4 * cos_term), x2);
-    
-    // Second phase calculation using register values
-    const float inv_den = __frcp_rn(__fmaf_rn(a3, h2, 1.0f));
-    x2 = __fma_rn(h2, (a2 + a4 * cos_term), x2) * inv_den;
-    x1 = __fma_rn(h2, (a6 * x0 + a1 * x2), x1);
-    x0 = __fma_rn(h2, (-a6 * x1), x0);
-    
-    // Write back to global memory only once at the end
-    X[0] = x0;
-    X[1] = x1;
-    X[2] = x2;
+    X[0] = __fma_rn(h1, (-X[1] - X[2]), X[0]);
+    X[1] = __fma_rn(h1, (X[0] + a[1] * X[1]), X[1]);
+    X[2] = __fma_rn(h1, (a[2] + X[2] * (X[0] - a[3])), X[2]);
+
+    // Оптимизация X[2]
+    double num_x2 = __fma_rn(h2, a[2], X[2]);         
+    double term1_den_x2 = __fma_rn(-h2, X[0], 1.0);     
+    double den_x2 = __fma_rn(h2, a[3], term1_den_x2);  
+    double new_X2 = __fdividef(num_x2, den_x2);       
+
+    // Оптимизация X[1]
+    double num_x1 = __fma_rn(h2, X[0], X[1]);          
+    double den_x1 = __fma_rn(-h2, a[1], 1.0);           
+    double new_X1 = __fdividef(num_x1, den_x1);  	  
+
+    // Обновление X[1] и X[2] перед использованием в X[0]
+    X[1] = new_X1;
+    X[2] = new_X2;
+
+    double term_x0 = -X[1] - X[2];                      
+    X[0] = __fma_rn(h2, term_x0, X[0]);      
 }
 
 __global__ void calculateTransTime(
