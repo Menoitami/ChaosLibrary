@@ -89,16 +89,28 @@ double init[3]{ 3, 3, 0 };
 		std::string(LLE_OUTPUT_PATH) + "/lle_2.csv"
 	);
 */
-	double a[4]{ 0, 0.2, 0.2, 5.7};
-	double init[3]{ 0.01, 0 , 0 };
-	double ranges[4]{ -0, 0.6, -0, 0.6 };
-	int indicesOfMutVars[2]{ 1, 2 };
+
+	double a[7]{ 0.5, 3, 0, 2, 1, 18, 1 };
+	double init[3]{ 3, 3, 0 };
+	double ranges[4]{ 0, 5, 0, 20 };
+	int indicesOfMutVars[2]{ 3, 5 };
 	int writableVar = 0;
 	double maxValue = 10000;
 	double eps_bif = 0.001;
 	double eps_lle = 1e-6;
 	int preScaller = 1;
-	double NT_lle = 0.5; // Для LLE
+	double NT_lle = 0.5;
+
+	// double a[4]{ 0, 0.2, 0.2, 5.7};
+	// double init[3]{ 0.01, 0 , 0 };
+	// double ranges[4]{ -0, 0.6, -0, 0.6 };
+	// int indicesOfMutVars[2]{ 1, 2 };
+	// int writableVar = 0;
+	// double maxValue = 10000;
+	// double eps_bif = 0.001;
+	// double eps_lle = 1e-6;
+	// int preScaller = 1;
+	// double NT_lle = 0.5; // Для LLE
 
 	std::cout << "--- Запуск тестов Bifurcation ---" << std::endl;
 
