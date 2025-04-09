@@ -414,31 +414,15 @@ __device__ void calculateDiscreteModel_rand(size_t seed, double* X, const double
 
 __device__ __host__ void calculateDiscreteModel(double* X, const double* a, const double h)
 {
-	// double h1 = a[0] * h;
-	// double h2 = (1 - a[0]) * h;
-	// double cos_term = cosf(a[5] * X[1]);
-	// X[0] = __fma_rn(h1, (-a[6] * X[1]), X[0]);          // x0 += d_h1 * (-a6 * x1)
-	// X[1] = __fma_rn(h1, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h1 * (a6 * x0 + a1 * x2)
-	// X[2] = __fma_rn(h1, (a[2] - a[3] * X[2] + a[4] * cos_term), X[2]); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
+	double h1 = a[0] * h;
+	double h2 = (1 - a[0]) * h;
+	X[0] = X[0] + h1 * (-a[6] * X[1]);
+	X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
+	X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
 
-	// // Вычисление общего коэффициента для второй фазы
-	// float inv_den = __frcp_rn(__fmaf_rn(a[3], h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
-
-	// // Вторая фаза
-	// X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
-	// X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h2 * (a6 * x0 + a1 * x2)
-	// X[0] = __fma_rn(h2, (-a[6] * X[1]), X[0]);          // x0 += d_h2 * (-a6 * x1)
-
-    double h1 = 0.5 * h + a[0];
-    double h2 = 0.5 * h - a[0];
-    
-    X[0] += h1 * (-X[1] - X[2]);
-    X[1] += h1 * (X[0] + a[1] * X[1]);
-    X[2] += h1 * (a[2] + X[2] * (X[0] - a[3]));
-
-    X[2] = (X[2] + h2 * a[2]) / (1 - h2 * (X[0] - a[3]));
-    X[1] = (X[1] + h2 * X[0]) / (1 - h2 * a[1]);
-    X[0] += h2 * (-X[1] - X[2]);
+	X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
+	X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
+	X[0] = X[0] + h2 * (-a[6] * X[1]);
 
 }
 
