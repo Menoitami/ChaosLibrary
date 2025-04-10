@@ -2,7 +2,7 @@
 .vscode/
 workspace/
 results/
-scripts/
+# scripts/
 # Ignore build output and generated files
 *.exe
 *.o

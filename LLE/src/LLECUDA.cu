@@ -51,7 +51,7 @@ __device__ void calculateDiscreteModel(double *X, const double *a, const double 
 {
 	double h1 = a[0] * h;
 	double h2 = (1 - a[0]) * h;
-	double cos_term = cosf(a[5] * X[1]);
+	double cos_term = cos(a[5] * X[1]);
 	X[0] = __fma_rn(h1, (-a[6] * X[1]), X[0]);          // x0 += d_h1 * (-a6 * x1)
 	X[1] = __fma_rn(h1, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h1 * (a6 * x0 + a1 * x2)
 	X[2] = __fma_rn(h1, (a[2] - a[3] * X[2] + a[4] * cos_term), X[2]); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)

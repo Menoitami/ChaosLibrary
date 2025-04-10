@@ -112,176 +112,176 @@ double init[3]{ 3, 3, 0 };
 	// int preScaller = 1;
 	// double NT_lle = 0.5; // Для LLE
 
-	std::cout << "--- Запуск тестов Bifurcation ---" << std::endl;
+	// std::cout << "--- Запуск тестов Bifurcation ---" << std::endl;
 
-	// --- Bifurcation: Легкий запуск ---
-	{
-		double tMax = 100;
-		int nPts = 50;
-		double transientTime = 1000;
+	// // --- Bifurcation: Легкий запуск ---
+	// {
+	// 	double tMax = 100;
+	// 	int nPts = 50;
+	// 	double transientTime = 1000;
 
-		// --- Новый Bifurcation ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			Bifurcation::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "Bifurcation (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Easy)!" << std::endl;
-			}
-		}
+	// 	// --- Новый Bifurcation ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		Bifurcation::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "Bifurcation (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Easy)!" << std::endl;
+	// 		}
+	// 	}
 
-		// --- Старый Bifurcation (old_library) ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			old_library::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_old.csv" // Другой файл для результатов
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_old_timing.txt"; // Другой файл для времени
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "old_library::Bifurcation (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Easy)!" << std::endl;
-			}
-		}
-	}
+	// 	// --- Старый Bifurcation (old_library) ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		old_library::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_old.csv" // Другой файл для результатов
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_easy_old_timing.txt"; // Другой файл для времени
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "old_library::Bifurcation (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Easy)!" << std::endl;
+	// 		}
+	// 	}
+	// }
 
-	// --- Bifurcation: Средний запуск ---
-	{
-		double tMax = 400;
-		int nPts = 100;
-		double transientTime = 5000;
+	// // --- Bifurcation: Средний запуск ---
+	// {
+	// 	double tMax = 400;
+	// 	int nPts = 100;
+	// 	double transientTime = 5000;
 
-		// --- Новый Bifurcation ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			Bifurcation::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "Bifurcation (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Medium)!" << std::endl;
-			}
-		}
-		// --- Старый Bifurcation (old_library) ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			old_library::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_old.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_old_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "old_library::Bifurcation (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Medium)!" << std::endl;
-			}
-		}
-	}
+	// 	// --- Новый Bifurcation ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		Bifurcation::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "Bifurcation (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Medium)!" << std::endl;
+	// 		}
+	// 	}
+	// 	// --- Старый Bifurcation (old_library) ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		old_library::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_old.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_medium_old_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "old_library::Bifurcation (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Medium)!" << std::endl;
+	// 		}
+	// 	}
+	// }
 
-	// --- Bifurcation: Тяжелый запуск ---
-	{
-		double tMax = 1000;
-		int nPts = 200;
-		double transientTime = 10000;
-		// --- Новый Bifurcation ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			Bifurcation::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "Bifurcation (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Hard)!" << std::endl;
-			}
-		}
+	// // --- Bifurcation: Тяжелый запуск ---
+	// {
+	// 	double tMax = 1000;
+	// 	int nPts = 200;
+	// 	double transientTime = 10000;
+	// 	// --- Новый Bifurcation ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		Bifurcation::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "Bifurcation (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени Bifurcation (Hard)!" << std::endl;
+	// 		}
+	// 	}
 
-		// --- Старый Bifurcation (old_library) ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			old_library::bifurcation2D(
-				tMax, nPts, h,
-				sizeof(init) / sizeof(double), init,
-				ranges, indicesOfMutVars, writableVar,
-				maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_old.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_old_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "old_library::Bifurcation (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Hard)!" << std::endl;
-			}
-		}
-	}
+	// 	// --- Старый Bifurcation (old_library) ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		old_library::bifurcation2D(
+	// 			tMax, nPts, h,
+	// 			sizeof(init) / sizeof(double), init,
+	// 			ranges, indicesOfMutVars, writableVar,
+	// 			maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			preScaller, eps_bif,
+	// 			std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_old.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/Bifurcation_hard_old_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "old_library::Bifurcation (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::Bifurcation (Hard)!" << std::endl;
+	// 		}
+	// 	}
+	// }
 
 	std::cout << "\n--- Запуск тестов LLE ---" << std::endl;
 
