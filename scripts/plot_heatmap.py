@@ -94,11 +94,11 @@ def analyze_data(data1, data2):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Generate and compare heatmaps from bifurcation diagram data.')
     
-    parser.add_argument('--input1', type=str, default='LLE_test.csv',
+    parser.add_argument('--input1', type=str, default='bifurcation_test.csv',
                        help='First input CSV filename (expected in workspace/bifurcation/)')
-    parser.add_argument('--input2', type=str, default='LLE_test_old.csv',
+    parser.add_argument('--input2', type=str, default='bifurcation_test_old.csv',
                        help='Second input CSV filename (expected in workspace/bifurcation/)')
-    parser.add_argument('--output', type=str, default='lle_comparison.png',
+    parser.add_argument('--output', type=str, default='bifurcation_comparison.png',
                        help='Output image filename (will be saved in Scripts directory)')
     parser.add_argument('--cmap', type=str, default='hot',
                        help='Matplotlib colormap to use')
@@ -114,7 +114,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     workspace_root = os.path.abspath(os.path.join(script_dir, '..')) 
     
-    input_dir = os.path.join(workspace_root, 'workspace/LLE')
+    input_dir = os.path.join(workspace_root, 'workspace/bifurcation')
     output_dir = os.path.join(workspace_root, 'results')
 
     input_filepath1 = os.path.join(input_dir, args.input1)
