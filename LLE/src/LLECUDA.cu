@@ -51,44 +51,17 @@ __device__ void calculateDiscreteModel(double *X, const double *a, const double 
 {
 	double h1 = a[0] * h;
 	double h2 = (1 - a[0]) * h;
+
+	// Используем FMA для уменьшения количества операций
+	X[0] = __fma_rn(h1, -a[6] * X[1], X[0]);
+	X[1] = __fma_rn(h1, a[6] * X[0] + a[1] * X[2], X[1]);
 	double cos_term = cos(a[5] * X[1]);
-	X[0] = __fma_rn(h1, (-a[6] * X[1]), X[0]);          // x0 += d_h1 * (-a6 * x1)
-	X[1] = __fma_rn(h1, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h1 * (a6 * x0 + a1 * x2)
-	X[2] = __fma_rn(h1, (a[2] - a[3] * X[2] + a[4] * cos_term), X[2]); // x2 += d_h1 * (a2 - a3 * x2 + a4 * cos_term)
+	X[2] = __fma_rn(h1, a[2] - a[3] * X[2] + a[4] * cos_term, X[2]);
 
-	// Вычисление общего коэффициента для второй фазы
-	float inv_den = __frcp_rn(__fmaf_rn(a[3], h2, 1.0f));     // Здесь fused не нужен, так как нет умножения с последующим сложением
-
-	// Вторая фаза
-	X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) * inv_den; // x2 = fma(d_h2, (a2 + a4 * cos_term), x2) * inv_den
-	X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]); // x1 += d_h2 * (a6 * x0 + a1 * x2)
-	X[0] = __fma_rn(h2, (-a[6] * X[1]), X[0]);          // x0 += d_h2 * (-a6 * x1)
-
-
-    // double h1 = __fma_rn(0.5, h, a[0]);
-    // double h2 = __fma_rn(0.5, h, -a[0]);
-    
-    // X[0] = __fma_rn(h1, (-X[1] - X[2]), X[0]);
-    // X[1] = __fma_rn(h1, (X[0] + a[1] * X[1]), X[1]);
-    // X[2] = __fma_rn(h1, (a[2] + X[2] * (X[0] - a[3])), X[2]);
-
-    // // Оптимизация X[2]
-    // double num_x2 = __fma_rn(h2, a[2], X[2]);         
-    // double term1_den_x2 = __fma_rn(-h2, X[0], 1.0);     
-    // double den_x2 = __fma_rn(h2, a[3], term1_den_x2);  
-    // double new_X2 = __fdividef(num_x2, den_x2);       
-
-    // // Оптимизация X[1]
-    // double num_x1 = __fma_rn(h2, X[0], X[1]);          
-    // double den_x1 = __fma_rn(-h2, a[1], 1.0);           
-    // double new_X1 = __fdividef(num_x1, den_x1);  	  
-
-    // // Обновление X[1] и X[2] перед использованием в X[0]
-    // X[1] = new_X1;
-    // X[2] = new_X2;
-
-    // double term_x0 = -X[1] - X[2];                      
-    // X[0] = __fma_rn(h2, term_x0, X[0]);      
+	// Объединяем операции
+	X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) / (1 + a[3] * h2);
+	X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]);
+	X[0] = __fma_rn(h2, -a[6] * X[1], X[0]);
 }
 
 __global__ void calculateTransTime(
@@ -105,14 +78,12 @@ __global__ void calculateTransTime(
     if (idx_a >= d_size_linspace_A || idx_b >= d_size_linspace_B) return;
 
     const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
-    const int total_size_per_thread = 2 * d_XSize + d_paramsSize;  // Полное состояние
+    const int total_size_per_thread = 2 * d_XSize + d_paramsSize; 
 
-    // Указатели в общей памяти
     double* my_sh_X = &sh_mem[thread_id * total_size_per_thread];
     double* my_sh_params = &sh_mem[thread_id * total_size_per_thread + d_XSize];
     double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_thread + d_XSize + d_paramsSize];
 
-    // Инициализация данных
     for (int i = 0; i < d_XSize; ++i) {
         my_sh_X[i] = X[i];
     }
@@ -125,29 +96,29 @@ __global__ void calculateTransTime(
     // Начальное вычисление модели
     loopCalculateDiscreteModel(my_sh_X, my_sh_params, d_amountOfTransPoints);
 
-    // Генерация perturbated_X
+	size_t seed = idx_a + idx_b * d_size_linspace_A;
     curandState_t state;
-    curand_init(idx_a + idx_b * d_size_linspace_A, 0, 0, &state);
 
-    float norm_factor = 0.0f;
+	curand_init(seed, 0, 0, &state);
+
+    double norm_factor = 0.0f;
     for (int i = 0; i < d_XSize; ++i) {
-        float z = curand_uniform(&state) - 0.5f;
+        double z = curand_uniform(&state) - 0.5f;
         norm_factor = __fmaf_rn(z, z, norm_factor);
     }
     norm_factor = __fmul_rn(rsqrtf(norm_factor), norm_factor);
     for (int i = 0; i < d_XSize; ++i) {
-        float z = __fdiv_rn(curand_uniform(&state) - 0.5f, norm_factor);
-        my_sh_perturbated_X[i] = __fmaf_rn(z, (float)d_eps, my_sh_X[i]);
+        double z = __fdiv_rn(curand_uniform(&state) - 0.5f, norm_factor);
+        my_sh_perturbated_X[i] = __fmaf_rn(z, (double)d_eps, my_sh_X[i]);
     }
 
-    // Сохранение полного состояния в глобальную память
     double* res_sh_X = &semi_result[(idx_a * d_size_linspace_A + idx_b ) * total_size_per_thread];
     for (int i = 0; i < d_XSize; ++i) {
-        res_sh_X[i] = my_sh_X[i];                    // X
-        res_sh_X[i + d_XSize + d_paramsSize] = my_sh_perturbated_X[i];  // perturbated_X
+        res_sh_X[i] = my_sh_X[i];                 
+        res_sh_X[i + d_XSize + d_paramsSize] = my_sh_perturbated_X[i]; 
     }
     for (int i = 0; i < d_paramsSize; ++i) {
-        res_sh_X[i + d_XSize] = my_sh_params[i];     // params
+        res_sh_X[i + d_XSize] = my_sh_params[i];    
     }
 }
 
@@ -168,22 +139,19 @@ __global__ void calculateSystem(
     const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
     const int total_size_per_thread = 2 * d_XSize + d_paramsSize;
 
-    // Указатели в общей памяти
     double* my_sh_X = &sh_mem[thread_id * total_size_per_thread];
     double* my_sh_params = &sh_mem[thread_id * total_size_per_thread + d_XSize];
     double* my_sh_perturbated_X = &sh_mem[thread_id * total_size_per_thread + d_XSize + d_paramsSize];
 
-    // Загрузка полного состояния из глобальной памяти
     double* res_sh_X = &semi_result[(idx_a * d_size_linspace_A + idx_b ) * total_size_per_thread];
     for (int i = 0; i < d_XSize; ++i) {
-        my_sh_X[i] = res_sh_X[i];                    // X
-        my_sh_perturbated_X[i] = res_sh_X[i + d_XSize + d_paramsSize];  // perturbated_X
+        my_sh_X[i] = res_sh_X[i];                    
+        my_sh_perturbated_X[i] = res_sh_X[i + d_XSize + d_paramsSize]; 
     }
     for (int i = 0; i < d_paramsSize; ++i) {
-        my_sh_params[i] = res_sh_X[i + d_XSize];     // params
+        my_sh_params[i] = res_sh_X[i + d_XSize]; 
     }
 
-    // Основной цикл вычислений
     double local_result = 0.0;
     const double inv_eps = 1.0 / d_eps;
 
@@ -194,20 +162,18 @@ __global__ void calculateSystem(
         // Расчет расстояния
         double distance = 0.0;
         for (int l = 0; l < d_XSize; ++l) {
-            double diff = (my_sh_X[l] - my_sh_perturbated_X[l]) * inv_eps;
+            double diff = (my_sh_X[l] - my_sh_perturbated_X[l]);
             distance += diff * diff;
         }
-        distance = sqrt(distance);
+        distance = sqrt(distance)/d_eps;
         local_result += __logf(distance);
 
-        // Обновление perturbated_X
         for (int j = 0; j < d_XSize; ++j) {
             my_sh_perturbated_X[j] = my_sh_X[j] - ((my_sh_X[j] - my_sh_perturbated_X[j]) / distance);
         }
     }
-
-    // Запись результата
-    atomicAdd(&result[idx_a][idx_b], local_result);
+	double temp = local_result / d_tMax;
+    atomicAdd(&result[idx_a][idx_b], temp);
 }
 
     
@@ -275,24 +241,18 @@ __host__ void LLE2D(
 	double* linspaceA = linspace(ranges[0], ranges[1], nPts);
 	double* linspaceB = linspace(ranges[2], ranges[3], nPts);
 
-	// Получаем информацию о доступной памяти GPU
 	size_t freeMemory;
 	size_t totalMemory;
 	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));
 
-	// Используем 95% доступной памяти
 	freeMemory *= 0.95;
 	
-	// Максимальное кол-во точек в одном блоке вычислений
-	size_t maxPointsPerSegment = (freeMemory / sizeof(double)) / 4; // Грубая оценка необходимой памяти
+	size_t maxPointsPerSegment = (freeMemory / sizeof(double)) / 4; 
 	
-	// Вычисляем размер сегмента для расчетов (max - полная сетка)
 	size_t segmentSize = std::min(maxPointsPerSegment, static_cast<size_t>(nPts * nPts));
 	
-	// Вычисляем количество сегментов для обработки всей сетки
 	size_t numSegments = (nPts * nPts + segmentSize - 1) / segmentSize;
 	
-	// Открываем файл для результатов
 	std::ofstream outFileStream;
 	outFileStream.open(OUT_FILE_PATH);
 	
@@ -300,12 +260,9 @@ __host__ void LLE2D(
 		std::cerr << "Output file open error: " << OUT_FILE_PATH << std::endl;
 		exit(1);
 	}
-	
-	// Записываем заголовок (диапазоны)
 	outFileStream << ranges[0] << " " << ranges[1] << "\n";
 	outFileStream << ranges[2] << " " << ranges[3] << "\n";
 	
-	// Устанавливаем константы для ядер
 	gpuErrorCheck(cudaMemcpyToSymbol(d_idxParamA, &indicesOfMutVars[0], sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_idxParamB, &indicesOfMutVars[1], sizeof(int)));
 	
@@ -316,6 +273,7 @@ __host__ void LLE2D(
 	
 	gpuErrorCheck(cudaMemcpyToSymbol(d_h, &h, sizeof(double)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_transTime, &transientTime, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_tMax, &tMax, sizeof(double)));
 	
 	int NT_steps = static_cast<int>(NT/h);
 	gpuErrorCheck(cudaMemcpyToSymbol(d_Nt_steps, &NT_steps, sizeof(int)));
@@ -326,31 +284,24 @@ __host__ void LLE2D(
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfAllpoints, &amountOfAllPoints, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalcBlocks, &amount_of_calc_blocks, sizeof(int)));
 	
-	// Вычисляем константы для интегрирования
 	double h_h1 = values[0] * h;
 	double h_h2 = (1 - values[0]) * h;
 	gpuErrorCheck(cudaMemcpyToSymbol(d_h1, &h_h1, sizeof(double)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_h2, &h_h2, sizeof(double)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_eps, &eps, sizeof(double)));
 	
-	// Счетчик строк для вывода
 	int stringCounter = 0;
 	
-	// Последовательно обрабатываем каждый сегмент
 	for (size_t segmentIdx = 0; segmentIdx < numSegments; ++segmentIdx) {
-		// Вычисляем размер текущего сегмента (последний может быть меньше)
 		size_t currentSegmentSize = (segmentIdx == numSegments - 1) ? 
 			(nPts * nPts) - (segmentSize * segmentIdx) : segmentSize;
 		
-		// Определяем размерность текущего сегмента в терминах A и B
 		size_t segmentSizeA = std::min(static_cast<size_t>(nPts), currentSegmentSize);
 		size_t segmentSizeB = std::min(static_cast<size_t>(nPts), (currentSegmentSize + segmentSizeA - 1) / segmentSizeA);
 		
-		// Смещение для текущего сегмента
 		size_t offsetA = (segmentIdx * segmentSize) / nPts;
 		size_t offsetB = (segmentIdx * segmentSize) % nPts;
 		
-		// Выделяем память для результатов
 		double** d_result;
 		double** h_result_temp = new double*[segmentSizeA];
 		
@@ -359,7 +310,6 @@ __host__ void LLE2D(
 		for (size_t i = 0; i < segmentSizeA; ++i) {
 			gpuErrorCheck(cudaMalloc(&h_result_temp[i], segmentSizeB * sizeof(double)));
 			
-			// Инициализируем нулями
 			double zero = 0.0;
 			for (size_t j = 0; j < segmentSizeB; ++j) {
 				gpuErrorCheck(cudaMemcpy(h_result_temp[i] + j, &zero, sizeof(double), cudaMemcpyHostToDevice));
@@ -475,7 +425,7 @@ __host__ void LLE2D(
 		gpuErrorCheck(cudaFree(d_values));
 		
 		// Печатаем прогресс
-		printf("Progress: %.2f%%\n", 100.0f * static_cast<float>(segmentIdx + 1) / static_cast<float>(numSegments));
+		printf("Progress: %.2f%%\n", 100.0f * static_cast<double>(segmentIdx + 1) / static_cast<double>(numSegments));
 	}
 	
 	// Закрываем файл

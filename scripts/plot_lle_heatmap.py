@@ -132,7 +132,7 @@ def analyze_data(data, ranges):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Generate a heatmap from LLE data files.')
     
-    parser.add_argument('--input', type=str, default='lle_hard_old.csv',
+    parser.add_argument('--input', type=str, default='lle_test.csv',
                        help='Input CSV filename (expected in workspace/lle/)')
     parser.add_argument('--output', type=str, default='lle_heatmap.png',
                        help='Output image filename (will be saved in Scripts directory)')

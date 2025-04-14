@@ -285,122 +285,11 @@ double init[3]{ 3, 3, 0 };
 
 	std::cout << "\n--- Запуск тестов LLE ---" << std::endl;
 
-	 // --- LLE: Легкий запуск ---
-	{
-		double tMax = 100;
-		int nPts = 50;
-		double transientTime = 1000;
-
-		// --- Новый LLE ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			LLE::LLE2D(
-				tMax, NT_lle, nPts, h, eps_lle,
-				init, sizeof(init) / sizeof(double),
-				ranges, indicesOfMutVars,
-				writableVar, maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_easy.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_easy_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "LLE (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Easy)!" << std::endl;
-			}
-		}
-
-		// --- Старый LLE (old_library) ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			old_library::LLE2D(
-				tMax, NT_lle, nPts, h, eps_lle,
-				init, sizeof(init) / sizeof(double),
-				ranges, indicesOfMutVars,
-				writableVar, maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_easy_old.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_easy_old_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "old_library::LLE (Easy) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Easy)!" << std::endl;
-			}
-		}
-	}
-
-	 // --- LLE: Средний запуск ---
 	{
 		double tMax = 500;
-		int nPts = 100;
-		double transientTime = 1000;
-
-		// --- Новый LLE ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			LLE::LLE2D(
-				tMax, NT_lle, nPts, h, eps_lle,
-				init, sizeof(init) / sizeof(double),
-				ranges, indicesOfMutVars,
-				writableVar, maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_medium.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_medium_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "LLE (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Medium)!" << std::endl;
-			}
-		}
-
-		// --- Старый LLE (old_library) ---
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			old_library::LLE2D(
-				tMax, NT_lle, nPts, h, eps_lle,
-				init, sizeof(init) / sizeof(double),
-				ranges, indicesOfMutVars,
-				writableVar, maxValue, transientTime,
-				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_medium_old.csv"
-			);
-			auto end = std::chrono::high_resolution_clock::now();
-			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_medium_old_timing.txt";
-			std::ofstream outFile(timingFileName);
-			if (outFile) {
-				outFile << duration;
-				outFile.close();
-				std::cout << "old_library::LLE (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Medium)!" << std::endl;
-			}
-		}
-	}
-
-	 // --- LLE: Тяжелый запуск ---
-	{
-		double tMax = 1000;
 		int nPts = 200;
-		double transientTime = 5000;
-		// --- Новый LLE ---
+		double transientTime = 1500;
+
 		{
 			auto start = std::chrono::high_resolution_clock::now();
 			LLE::LLE2D(
@@ -409,20 +298,21 @@ double init[3]{ 3, 3, 0 };
 				ranges, indicesOfMutVars,
 				writableVar, maxValue, transientTime,
 				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_hard.csv"
+				std::string(LLE_OUTPUT_PATH) + "/lle_test.csv"
 			);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_hard_timing.txt";
+			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_timing.txt";
 			std::ofstream outFile(timingFileName);
 			if (outFile) {
 				outFile << duration;
 				outFile.close();
-				std::cout << "LLE (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+				std::cout << "LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
 			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Hard)!" << std::endl;
+				std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Test)!" << std::endl;
 			}
 		}
+
 		// --- Старый LLE (old_library) ---
 		{
 			auto start = std::chrono::high_resolution_clock::now();
@@ -432,21 +322,129 @@ double init[3]{ 3, 3, 0 };
 				ranges, indicesOfMutVars,
 				writableVar, maxValue, transientTime,
 				a, sizeof(a) / sizeof(double),
-				std::string(LLE_OUTPUT_PATH) + "/lle_hard_old.csv"
+				std::string(LLE_OUTPUT_PATH) + "/lle_test_old.csv"
 			);
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_hard_old_timing.txt";
+			std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_old_timing.txt";
 			std::ofstream outFile(timingFileName);
 			if (outFile) {
 				outFile << duration;
 				outFile.close();
-				std::cout << "old_library::LLE (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+				std::cout << "old_library::LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
 			} else {
-				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Hard)!" << std::endl;
+				std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Test)!" << std::endl;
 			}
-		}
+		 }
 	}
+
+	//  // --- LLE: Средний запуск ---
+	// {
+	// 	double tMax = 500;
+	// 	int nPts = 100;
+	// 	double transientTime = 1000;
+
+	// 	// --- Новый LLE ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		LLE::LLE2D(
+	// 			tMax, NT_lle, nPts, h, eps_lle,
+	// 			init, sizeof(init) / sizeof(double),
+	// 			ranges, indicesOfMutVars,
+	// 			writableVar, maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			std::string(LLE_OUTPUT_PATH) + "/lle_medium.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_medium_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "LLE (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Medium)!" << std::endl;
+	// 		}
+	// 	}
+
+	// 	// --- Старый LLE (old_library) ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		old_library::LLE2D(
+	// 			tMax, NT_lle, nPts, h, eps_lle,
+	// 			init, sizeof(init) / sizeof(double),
+	// 			ranges, indicesOfMutVars,
+	// 			writableVar, maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			std::string(LLE_OUTPUT_PATH) + "/lle_medium_old.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_medium_old_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "old_library::LLE (Medium) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Medium)!" << std::endl;
+	// 		}
+	// 	}
+	// }
+
+	//  // --- LLE: Тяжелый запуск ---
+	// {
+	// 	double tMax = 1000;
+	// 	int nPts = 200;
+	// 	double transientTime = 5000;
+	// 	// --- Новый LLE ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		LLE::LLE2D(
+	// 			tMax, NT_lle, nPts, h, eps_lle,
+	// 			init, sizeof(init) / sizeof(double),
+	// 			ranges, indicesOfMutVars,
+	// 			writableVar, maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			std::string(LLE_OUTPUT_PATH) + "/lle_hard.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_hard_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "LLE (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Hard)!" << std::endl;
+	// 		}
+	// 	}
+	// 	// --- Старый LLE (old_library) ---
+	// 	{
+	// 		auto start = std::chrono::high_resolution_clock::now();
+	// 		old_library::LLE2D(
+	// 			tMax, NT_lle, nPts, h, eps_lle,
+	// 			init, sizeof(init) / sizeof(double),
+	// 			ranges, indicesOfMutVars,
+	// 			writableVar, maxValue, transientTime,
+	// 			a, sizeof(a) / sizeof(double),
+	// 			std::string(LLE_OUTPUT_PATH) + "/lle_hard_old.csv"
+	// 		);
+	// 		auto end = std::chrono::high_resolution_clock::now();
+	// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_hard_old_timing.txt";
+	// 		std::ofstream outFile(timingFileName);
+	// 		if (outFile) {
+	// 			outFile << duration;
+	// 			outFile.close();
+	// 			std::cout << "old_library::LLE (Hard) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+	// 		} else {
+	// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Hard)!" << std::endl;
+	// 		}
+	// 	}
+	// }
 
 	// Старый код Bifurcation и LLE оставлен закомментированным для справки
 /*
