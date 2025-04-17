@@ -63,8 +63,6 @@ __device__ int loopCalculateDiscreteModel_int(
 	double* data,
 	const int startDataIndex);
 
-    __device__ void calculateDiscreteModel(double* X, const double* a, const double h);
-
     __device__  double distance(double x1, double y1, double x2, double y2);
 }
 #endif // BIFURCATION_CUDA_CUH

@@ -20,14 +20,6 @@ set(CMAKE_CUDA_STANDARD 17)
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER}")
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/debri)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/LLE)
-
-set(SOURCES
-    src/main.cpp
-)
-
 # Укажите заголовочные файлы для компиляции
 include_directories(
     ${CUDA_INCLUDE_DIRS}
@@ -36,7 +28,16 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation/include
     ${CMAKE_CURRENT_SOURCE_DIR}/debri
     ${CMAKE_CURRENT_SOURCE_DIR}/LLE/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/systems
     )
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/debri)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/LLE)
+
+set(SOURCES
+    src/main.cu
+)
 
 # Создайте исполняемый файл
 add_executable(ChaosLib ${SOURCES})

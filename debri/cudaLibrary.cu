@@ -414,15 +414,26 @@ __device__ void calculateDiscreteModel_rand(size_t seed, double* X, const double
 
 __device__ __host__ void calculateDiscreteModel(double* X, const double* a, const double h)
 {
-	double h1 = a[0] * h;
-	double h2 = (1 - a[0]) * h;
-	X[0] = X[0] + h1 * (-a[6] * X[1]);
-	X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
-	X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
+	// double h1 = a[0] * h;
+	// double h2 = (1 - a[0]) * h;
+	// X[0] = X[0] + h1 * (-a[6] * X[1]);
+	// X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
+	// X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
 
-	X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
-	X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
-	X[0] = X[0] + h2 * (-a[6] * X[1]);
+	// X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
+	// X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
+	// X[0] = X[0] + h2 * (-a[6] * X[1]);
+	    double h1 = 0.5 * h + a[0];
+        double h2 = 0.5 * h - a[0];
+
+        
+        X[0] += h1 * (-X[1] - X[2]);
+        X[1] += h1 * (X[0] + a[1] * X[1]);
+        X[2] += h1 * (a[2] + X[2] * (X[0] - a[3]));
+
+        X[2] = (X[2] + h2 * a[2]) / (1 - h2 * (X[0] - a[3]));
+        X[1] = (X[1] + h2 * X[0]) / (1 - h2 * a[1]);
+        X[0] += h2 * (-X[1] - X[2]); 
 
 }
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <systems.cuh>
 
 namespace Bifurcation_constants {
 __constant__ double d_tMax;
@@ -364,7 +365,7 @@ __device__ int loopCalculateDiscreteModel_int(
 		if (data != nullptr) 
 			data[startDataIndex + i] = (x[writableVar]);
 
-		calculateDiscreteModel(x, values, h);
+		CALC_DISCRETE_MODEL(x, values, h);
 
 		double val = x[writableVar];
 		if (val != val || val == val + 1.0) {
@@ -495,50 +496,6 @@ __device__ int dbscan(double* data, double* intervals, double* helpfulArray,
 	return cluster - 1;
 }
 
-
-__device__ void calculateDiscreteModel(double* X, const double* a, const double h)
-{
-	double h1 = a[0] * h;
-	double h2 = (1 - a[0]) * h;
-
-	// Используем FMA для уменьшения количества операций
-	X[0] = __fma_rn(h1, -a[6] * X[1], X[0]);
-	X[1] = __fma_rn(h1, a[6] * X[0] + a[1] * X[2], X[1]);
-	double cos_term = cos(a[5] * X[1]);
-	X[2] = __fma_rn(h1, a[2] - a[3] * X[2] + a[4] * cos_term, X[2]);
-
-	// Объединяем операции
-	X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) / (1 + a[3] * h2);
-	X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]);
-	X[0] = __fma_rn(h2, -a[6] * X[1], X[0]);
-
-
-    // double h1 = __fma_rn(0.5, h, a[0]);
-    // double h2 = __fma_rn(0.5, h, -a[0]);
-    
-    // X[0] = __fma_rn(h1, (-X[1] - X[2]), X[0]);
-    // X[1] = __fma_rn(h1, (X[0] + a[1] * X[1]), X[1]);
-    // X[2] = __fma_rn(h1, (a[2] + X[2] * (X[0] - a[3])), X[2]);
-
-    // // Оптимизация X[2]
-    // double num_x2 = __fma_rn(h2, a[2], X[2]);         
-    // double term1_den_x2 = __fma_rn(-h2, X[0], 1.0);     
-    // double den_x2 = __fma_rn(h2, a[3], term1_den_x2);  
-    // double new_X2 = __fdividef(num_x2, den_x2);       
-
-    // // Оптимизация X[1]
-    // double num_x1 = __fma_rn(h2, X[0], X[1]);          
-    // double den_x1 = __fma_rn(-h2, a[1], 1.0);           
-    // double new_X1 = __fdividef(num_x1, den_x1);  	  
-
-    // // Обновление X[1] и X[2] перед использованием в X[0]
-    // X[1] = new_X1;
-    // X[2] = new_X2;
-
-    // double term_x0 = -X[1] - X[2];                      
-    // X[0] = __fma_rn(h2, term_x0, X[0]);      
-
-}
 
 __device__ double distance(double x1, double y1, double x2, double y2)
 {

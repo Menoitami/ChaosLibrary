@@ -23,7 +23,9 @@ set(HEADERS
 # Укажите заголовочные файлы для компиляции
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/debri)
+    ${CMAKE_SOURCE_DIR}/debri
+    ${CMAKE_SOURCE_DIR}/systems
+    )
 
 add_library(Bifurcation STATIC ${SOURCES})
 
