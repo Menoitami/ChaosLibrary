@@ -4,20 +4,20 @@ echo Building ChaosLibrary...
 :: Go to repository root
 cd %~dp0..
 
-:: Create build directory in parent directory if it doesn't exist
-if not exist ..\build mkdir ..\build
+:: Create build directory if it doesn't exist
+if not exist build mkdir build
 
 :: Navigate to build directory
-cd ..\build
+cd build
 
 :: Run CMake and build
 echo Running CMake...
-cmake ..\ChaosLibrary
+cmake ..
 echo Building with CMake...
 cmake --build . --config Release
 
 :: Go back to the repository root
-cd ..\ChaosLibrary
+cd ..
 
 if %ERRORLEVEL% == 0 (
     echo Build completed successfully!

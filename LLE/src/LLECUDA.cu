@@ -5,6 +5,7 @@
 #include <nvrtc.h>
 #include <curand_kernel.h>
 #include <cooperative_groups.h>
+#include "systems.cuh"
 namespace LLE_constants{
 	// Константы CUDA для GPU
 __constant__ double d_tMax;
@@ -49,19 +50,7 @@ __device__ void loopCalculateDiscreteModel(double *X, const double *a,
 
 __device__ void calculateDiscreteModel(double *X, const double *a, const double h)
 {
-	double h1 = a[0] * h;
-	double h2 = (1 - a[0]) * h;
-
-	// Используем FMA для уменьшения количества операций
-	X[0] = __fma_rn(h1, -a[6] * X[1], X[0]);
-	X[1] = __fma_rn(h1, a[6] * X[0] + a[1] * X[2], X[1]);
-	double cos_term = cos(a[5] * X[1]);
-	X[2] = __fma_rn(h1, a[2] - a[3] * X[2] + a[4] * cos_term, X[2]);
-
-	// Объединяем операции
-	X[2] = __fma_rn(h2, (a[2] + a[4] * cos_term), X[2]) / (1 + a[3] * h2);
-	X[1] = __fma_rn(h2, (a[6] * X[0] + a[1] * X[2]), X[1]);
-	X[0] = __fma_rn(h2, -a[6] * X[1], X[0]);
+	CALC_DISCRETE_MODEL(X, a, h);
 }
 
 __global__ void calculateTransTime(

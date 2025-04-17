@@ -14,10 +14,10 @@ if %ERRORLEVEL% EQU 2 (
     exit /b 0
 )
 
-:: Remove build directory in the parent folder
-if exist ..\build (
+:: Remove build directory
+if exist build (
     echo Removing build directory...
-    rd /s /q ..\build
+    rd /s /q build
 )
 
 :: Clean workspace directory
