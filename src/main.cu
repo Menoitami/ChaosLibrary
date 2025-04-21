@@ -50,9 +50,9 @@ int main()
 
 	// --- Bifurcation: Легкий запуск ---
 	{
-		double CT = 2000;
+		double CT = 1000;
 		int nPts = 100;
-		double TT = 10000;
+		double TT = 5000;
 
 		// --- Новый Bifurcation ---
 		{

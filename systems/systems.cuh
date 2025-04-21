@@ -6,7 +6,7 @@
 #include "device_launch_parameters.h"
 #include <math.h>
 
-#define USE_ROSSLER_MODEL  
+#define USE_CHAMELEON_MODEL  
 
 #ifdef USE_CHAMELEON_MODEL
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
@@ -35,14 +35,19 @@ __device__ inline void calcDiscreteModel(double* x, const double* a, double h) {
         double h1 = 0.5 * h + a[0];
         double h2 = 0.5 * h - a[0];
 
-        
-        x[0] += h1 * (-x[1] - x[2]);
-        x[1] += h1 * (x[0] + a[1] * x[1]);
-        x[2] += h1 * (a[2] + x[2] * (x[0] - a[3]));
+        // First stage calculations using __fma_rn
+        x[0] = __fma_rn(h1, -x[1] - x[2], x[0]);
+        x[1] = __fma_rn(h1, x[0] + a[1] * x[1], x[1]);
+        x[2] = __fma_rn(h1, a[2] + x[2] * (x[0] - a[3]), x[2]);
 
-        x[2] = (x[2] + h2 * a[2]) / (1 - h2 * (x[0] - a[3]));
-        x[1] = (x[1] + h2 * x[0]) / (1 - h2 * a[1]);
-        x[0] += h2 * (-x[1] - x[2]);                        
+        // Second stage calculations using __fma_rn where possible
+        double temp = __fma_rn(-h2, x[0] - a[3], 1.0); // Calculate denominator 1 - h2 * (x[0] - a[3])
+        x[2] = __fma_rn(h2, a[2], x[2]) / temp;
+        
+        temp = __fma_rn(-h2, a[1], 1.0); // Calculate denominator 1 - h2 * a[1]
+        x[1] = __fma_rn(h2, x[0], x[1]) / temp;
+        
+        x[0] = __fma_rn(h2, -x[1] - x[2], x[0]);                        
     }
     #define SIZE_X 3
     #define SIZE_A 4

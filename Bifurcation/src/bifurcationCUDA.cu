@@ -33,6 +33,9 @@ __constant__ int d_originalNPtsLimiter;
 
 __constant__ int d_amountOfCalculatedPoints;
 
+__constant__ double d_init_conditions[SIZE_X];
+__constant__ double d_values[SIZE_A];
+
 
 __host__ void bifurcation2D(
 	const double	tMax,								// Время моделирования системы
@@ -122,6 +125,8 @@ __host__ void bifurcation2D(
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsInBlock, &amountOfPointsInBlock, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_originalNPtsLimiter, &originalNPtsLimiter, sizeof(int)));
 	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsForSkip, &amountOfPointsForSkip, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_init_conditions, &initialConditions, SIZE_X * sizeof(double)));
+	//gpuErrorCheck(cudaMemcpyToSymbol(d_values, &values, amountOfValues * sizeof(double)));
 
 	int dimension = 2;
 	gpuErrorCheck(cudaMemcpyToSymbol(d_dimension, &dimension, sizeof(int)));
@@ -133,11 +138,11 @@ __host__ void bifurcation2D(
 		if (i == amountOfIteration - 1)
 			nPtsLimiter = (nPts * nPts) - (nPtsLimiter * i);
 
-		int blockSize;			// Переменная для хранения размера блока
-		int minGridSize;		// Переменная для хранения минимального размера сетки
-		int gridSize;			// Переменная для хранения сетки
-
-		blockSize = 20000 / ((amountOfInitialConditions + amountOfValues) * sizeof(double));
+		int blockSize;			
+		int minGridSize;		
+		int gridSize;			
+		
+		blockSize = 160;
 
 		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
 
@@ -145,17 +150,33 @@ __host__ void bifurcation2D(
 		gpuErrorCheck(cudaMemcpyToSymbol(d_nPtsLimiter, &nPtsLimiter, sizeof(int)));
 		gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalculatedPoints, &calculatedPoints, sizeof(int)));
 
+		double* d_semi_result;
+		gpuErrorCheck(cudaMalloc((void**)& d_semi_result, nPtsLimiter * (amountOfInitialConditions + amountOfValues) * sizeof(double)));
+
+		calculateTransTimeCUDA << <gridSize, blockSize >> >(
+						d_ranges,
+						d_indicesOfMutVars,
+						d_initialConditions,
+						d_values,
+						d_semi_result,
+						d_amountOfPeaks);
+		cudaDeviceSynchronize();
+
+		// Затем строим модель только для точек с флагом 1
 		calculateDiscreteModelCUDA << <gridSize, blockSize, (amountOfInitialConditions + amountOfValues) * sizeof(double) * blockSize >> >(
 						d_ranges,
 						d_indicesOfMutVars,
 						d_initialConditions,
 						d_values,
 						d_data,
+						d_semi_result,
 						d_amountOfPeaks);
+
 
 		gpuGlobalErrorCheck();
 
 		gpuErrorCheck(cudaDeviceSynchronize());
+		cudaFree(d_semi_result);
 
 		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, peakFinderCUDA, 0, nPtsLimiter);
 		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
@@ -225,7 +246,63 @@ __host__ void bifurcation2D(
 	delete[] h_dbscanResult;
 }
 
+__global__ void calculateTransTimeCUDA(
+	double*			ranges, 
+	int*			indicesOfMutVars, 
+	double*			initialConditions,
+	const double*	values, 
+	double*			semi_result,
+	int*			maxValueCheckerArray)
+{
 
+	double localX[SIZE_X];
+	double localValues[SIZE_A];
+
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if (idx >= d_nPtsLimiter)		
+			return;
+
+	#pragma unroll
+	for ( int i = 0; i < d_amountOfInitialConditions; ++i )
+		localX[i] = initialConditions[i];
+
+	#pragma unroll
+	for (int i = 0; i < d_amountOfValues; ++i)
+		localValues[i] = values[i];
+
+	#pragma unroll
+	for (int i = 0; i < d_dimension; ++i) {
+		double divisor;
+		switch(i) {
+			case 0: divisor = 1.0; break;
+			case 1: divisor = d_nPts; break;
+			case 2: divisor = d_nPts * d_nPts; break;
+			default: divisor = __powf(d_nPts, i);
+		}
+		
+		int normalizedIdx = ((d_amountOfCalculatedPoints + idx) / (int)divisor) % d_nPts;
+		double scale = (ranges[i * 2 + 1] - ranges[i * 2]) / (d_nPts - 1);
+		localValues[indicesOfMutVars[i]] = ranges[i * 2] + normalizedIdx * scale;
+	}
+
+
+	maxValueCheckerArray[idx] = 1;
+	#pragma unroll  4
+	for (int i = 0; i < d_amountOfPointsForSkip; ++i) {
+		CALC_DISCRETE_MODEL(localX, localValues, d_h);
+	}
+	
+	if (d_maxValue != 0 && maxValueCheckerArray[idx]) {
+			maxValueCheckerArray[idx] = (localX[d_writableVar] <= d_maxValue && localX[d_writableVar] >= -d_maxValue);
+	}
+	#pragma unroll
+	for (int i = 0; i < SIZE_X; ++i)	
+		semi_result[idx * (SIZE_X + SIZE_A) + i] = localX[i];
+	#pragma unroll
+	for (int i = 0; i < SIZE_A; ++i)
+		semi_result[idx * (SIZE_X + SIZE_A) + SIZE_X + i] = localValues[i];
+
+}
 
 __global__ void calculateDiscreteModelCUDA(
 	double*			ranges, 
@@ -233,38 +310,35 @@ __global__ void calculateDiscreteModelCUDA(
 	double*			initialConditions,
 	const double*	values, 
 	double*			data, 
+	double*			semi_result,
 	int*			maxValueCheckerArray)
 {
-	extern __shared__ double s[];
-
-	double* localX = s + ( threadIdx.x * d_amountOfInitialConditions );
-	double* localValues = s + ( blockDim.x * d_amountOfInitialConditions ) + ( threadIdx.x * d_amountOfValues );
-
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	if (idx >= d_nPtsLimiter)		
 			return;
 
+	// double localX[SIZE_X];
+	// double localValues[SIZE_A];
+	extern __shared__ double s[];
+
+	double* localX = s + ( threadIdx.x * d_amountOfInitialConditions );
+	double* localValues = s + ( blockDim.x * d_amountOfInitialConditions ) + ( threadIdx.x * d_amountOfValues );
+	
 	for ( int i = 0; i < d_amountOfInitialConditions; ++i )
-		localX[i] = initialConditions[i];
+		localX[i] = semi_result[idx * (SIZE_X + SIZE_A) + i];
 
 	for (int i = 0; i < d_amountOfValues; ++i)
-		localValues[i] = values[i];
+		localValues[i] = semi_result[idx * (SIZE_X + SIZE_A) + SIZE_X + i];
 
 	for (int i = 0; i < d_dimension; ++i)
 		localValues[indicesOfMutVars[i]] = getValueByIdx(d_amountOfCalculatedPoints + idx, 
 			d_nPts, ranges[i * 2], ranges[i * 2 + 1], i);
 
-	int flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsForSkip,
-		d_amountOfInitialConditions, d_writableVar, d_maxValue, nullptr, idx * d_amountOfPointsInBlock);
+	int flag =0;
 
-	if (flag == 1)
+	if (maxValueCheckerArray[idx] == 1)
 		flag = loopCalculateDiscreteModel_int(localX, localValues, d_h, d_amountOfPointsInBlock,
 			d_amountOfInitialConditions, d_writableVar, d_maxValue, data, idx * d_amountOfPointsInBlock);
-
-
-	if (maxValueCheckerArray != nullptr) {
-		maxValueCheckerArray[idx] = flag;
-	}
 
 
 	return;

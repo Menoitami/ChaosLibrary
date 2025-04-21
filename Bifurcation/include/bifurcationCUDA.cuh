@@ -27,12 +27,22 @@ __host__ void bifurcation2D(
 	const double	eps,
 	std::string		OUT_FILE_PATH);					// Эпсилон для алгоритма DBSCAN 
 
+
+__global__ void calculateTransTimeCUDA(
+	double*			ranges, 
+	int*			indicesOfMutVars, 
+	double*			initialConditions,
+	const double*	values, 
+	double*			semi_result,
+	int*			maxValueCheckerArray);
+
 __global__ void calculateDiscreteModelCUDA(
 	double*			ranges, 
 	int*			indicesOfMutVars, 
 	double*			initialConditions,
 	const double*	values, 
 	double*			data, 
+	double*			semi_result,
 	int*			maxValueCheckerArray);
 
 __global__ void peakFinderCUDA(double* data, 
