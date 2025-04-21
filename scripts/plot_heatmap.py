@@ -45,7 +45,7 @@ def load_data(filepath):
     return padded_data
 
 
-def main():
+def main(vmin=None, vmax=None):
     # Полные пути к файлам
     input_filepath1 = os.path.join(input_dir, input_file1)
     input_filepath2 = os.path.join(input_dir, input_file2)
@@ -76,12 +76,12 @@ def main():
     plt.figure(figsize=(20, 6))
     
     plt.subplot(131)
-    plt.imshow(data1, cmap='hot', aspect='auto')
+    plt.imshow(data1, cmap='hot', aspect='auto', vmin=vmin, vmax=vmax)
     plt.colorbar()
     plt.title(f"Данные 1: {input_file1}")
     
     plt.subplot(132)
-    plt.imshow(data2, cmap='hot', aspect='auto')
+    plt.imshow(data2, cmap='hot', aspect='auto', vmin=vmin, vmax=vmax)
     plt.colorbar()
     plt.title(f"Данные 2: {input_file2}")
     
@@ -97,4 +97,5 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    # Example usage with manual vmin and vmax
+    main(vmin=0, vmax=10)
