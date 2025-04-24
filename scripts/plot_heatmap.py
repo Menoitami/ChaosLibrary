@@ -98,4 +98,4 @@ def main(vmin=None, vmax=None):
 
 if __name__ == "__main__":
     # Example usage with manual vmin and vmax
-    main(vmin=0, vmax=10)
+    main(vmin=0, vmax=20)

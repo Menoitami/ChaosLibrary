@@ -27,6 +27,22 @@ __host__ void bifurcation2D(
 	const double	eps,
 	std::string		OUT_FILE_PATH);					// Эпсилон для алгоритма DBSCAN 
 
+__host__ void bifurcation1D(
+	const double	tMax,							// Время моделирования системы
+	const int		nPts,							// Разрешение диаграммы
+	const double	h,								// Шаг интегрирования
+	const int		amountOfInitialConditions,		// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,				// Массив с начальными условиями
+	const double* ranges,							// Диаппазон изменения переменной
+	const int* indicesOfMutVars,				// Индекс изменяемой переменной в массиве values
+	const int		writableVar,					// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,						// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,					// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,							// Параметры
+	const int		amountOfValues,					// Количество параметров
+	const int		preScaller,
+	std::string		OUT_FILE_PATH);						// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+
 
 __global__ void calculateTransTimeCUDA(
 	double*			ranges, 
@@ -51,7 +67,7 @@ __global__ void peakFinderCUDA(double* data,
 __global__ void dbscanCUDA(double* data, const int sizeOfBlock, const int amountOfBlocks,
 	const int* amountOfPeaks, double* intervals, double* helpfulArray,
 	const double eps, int* outData);
-__device__ double getValueByIdx(const int idx, const int nPts,
+__device__ __host__ double getValueByIdx(const int idx, const int nPts,
 	const double startRange, const double finishRange, const int valueNumber);
 
     

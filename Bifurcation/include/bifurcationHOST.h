@@ -13,21 +13,21 @@ namespace Bifurcation {
     /**
      * Функция для расчета бифуркационной диаграммы в 1D
      */
-    void bifurcation1D(
-        const double    tMax,                           // Время моделирования системы
-        const int       nPts,                           // Количество разбиений
-        const double    h,                              // Шаг интегрирования
-        const int       amountOfInitialConditions,      // Количество начальных условий (уравнений в системе)
-        const double*   initialConditions,              // Массив с начальными условиями
-        const double*   ranges,                         // Диапазон изменения параметров
-        const int*      indicesOfMutVars,               // Индекс изменяемого параметра в массиве values
-        const int       writableVar,                    // Индекс параметра, по которому будем строить диаграмму
-        const double    maxValue,                       // Максимальное значение (по модулю), выше которого система считается "расходящейся"
-        const double    transientTime,                  // Время, которое будет промоделировано перед расчетом диаграммы
-        const double*   values,                         // Параметры
-        const int       amountOfValues,                 // Количество параметров
-        const int       preScaller,                     // Множитель, который уменьшает время и объем расчетов
-        std::string     OUT_FILE_PATH);                 // Путь к выходному файлу
+ void bifurcation1D(
+	const double	tMax,							// Время моделирования системы
+	const int		nPts,							// Разрешение диаграммы
+	const double	h,								// Шаг интегрирования
+	const int		amountOfInitialConditions,		// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,				// Массив с начальными условиями
+	const double* ranges,							// Диаппазон изменения переменной
+	const int* indicesOfMutVars,				// Индекс изменяемой переменной в массиве values
+	const int		writableVar,					// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,						// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,					// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,							// Параметры
+	const int		amountOfValues,					// Количество параметров
+	const int		preScaller,
+	std::string		OUT_FILE_PATH);					// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
         
     /**
      * Функция для построения двумерной бифуркационной диаграммы (DBSCAN)

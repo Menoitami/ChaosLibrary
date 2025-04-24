@@ -6,7 +6,7 @@
 #include "device_launch_parameters.h"
 #include <math.h>
 
-#define USE_CHAMELEON_MODEL  
+#define USE_ROSSLER_MODEL  
 
 #ifdef USE_CHAMELEON_MODEL
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {

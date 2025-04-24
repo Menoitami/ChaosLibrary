@@ -391,7 +391,7 @@ __global__ void dbscanCUDA(
 	outData[idx] = dbscan(data, intervals, helpfulArray, idx * sizeOfBlock, amountOfPeaks[idx], sizeOfBlock, idx, eps, outData);
 }
 
-__device__ double getValueByIdx(
+__device__ __host__ double getValueByIdx(
     const int idx, 
     const int nPts,
     const double startRange, 
@@ -404,7 +404,7 @@ __device__ double getValueByIdx(
         case 0: divisor = 1.0; break;
         case 1: divisor = nPts; break;
         case 2: divisor = nPts * nPts; break;
-        default: divisor = __powf(nPts, valueNumber);
+        default: divisor = pow(nPts, valueNumber);
     }
     
     int normalizedIdx = (idx / (int)divisor) % nPts;
@@ -575,5 +575,198 @@ __device__ double distance(double x1, double y1, double x2, double y2)
 
 	return hypotf(dx, dy);
 }
+
+
+
+__host__ void bifurcation1D(
+	const double	tMax,							// Время моделирования системы
+	const int		nPts,							// Разрешение диаграммы
+	const double	h,								// Шаг интегрирования
+	const int		amountOfInitialConditions,		// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,				// Массив с начальными условиями
+	const double* ranges,							// Диаппазон изменения переменной
+	const int* indicesOfMutVars,				// Индекс изменяемой переменной в массиве values
+	const int		writableVar,					// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,						// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,					// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,							// Параметры
+	const int		amountOfValues,					// Количество параметров
+	const int		preScaller,
+	std::string		OUT_FILE_PATH)						// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+{
+	int amountOfPointsInBlock = tMax / h / preScaller;
+	int amountOfPointsForSkip = transientTime / h;
+
+	size_t freeMemory;											
+	size_t totalMemory;											
+	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));	
+	freeMemory *= 0.95;				
+	size_t nPtsLimiter = freeMemory / (sizeof(double) * amountOfPointsInBlock * 3);
+	nPtsLimiter = nPtsLimiter > nPts ? nPts : nPtsLimiter;	
+	size_t originalNPtsLimiter = nPtsLimiter;				
+
+	int* h_dbscanResult = new int[nPtsLimiter * sizeof(int)];
+
+	double* d_data;					// Указатель на массив в памяти GPU для хранения траектории системы
+	double* d_ranges;				// Указатель на массив с диапазоном изменения переменной
+	int* d_indicesOfMutVars;		// Указатель на массив с индексом изменяемой переменной в массиве values
+	double* d_initialConditions;	// Указатель на массив с начальными условиями
+	double* d_values;				// Указатель на массив с параметрами
+
+	int* d_amountOfPeaks;		// Указатель на массив в GPU с кол-вом пиков в каждой системе.
+	double* d_intervals;			// Указатель на массив в GPU с межпиковыми интервалами пиков
+	int* d_dbscanResult;			// Указатель на массив в GPU результирующей матрицы (диаграммы) в GPU
+	double* d_helpfulArray;			// Указатель на массив в GPU на вспомогательный массив
+
+	gpuErrorCheck(cudaMalloc((void**)& d_data, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_ranges, 2 * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_indicesOfMutVars, 1 * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_initialConditions, amountOfInitialConditions * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_values, amountOfValues * sizeof(double)));
+
+	gpuErrorCheck(cudaMalloc((void**)& d_amountOfPeaks, nPtsLimiter * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_intervals, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+	gpuErrorCheck(cudaMalloc((void**)& d_dbscanResult, nPtsLimiter * sizeof(int)));
+	gpuErrorCheck(cudaMalloc((void**)& d_helpfulArray, nPtsLimiter * amountOfPointsInBlock * sizeof(double)));
+
+	gpuErrorCheck(cudaMemcpy(d_ranges, ranges, 2 * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_indicesOfMutVars, indicesOfMutVars, 1 * sizeof(int), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_initialConditions, initialConditions, amountOfInitialConditions * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+	gpuErrorCheck(cudaMemcpy(d_values, values, amountOfValues * sizeof(double), cudaMemcpyKind::cudaMemcpyHostToDevice));
+
+	size_t amountOfIteration = (size_t)ceil((double)nPts / (double)nPtsLimiter);
+
+	std::ofstream outFileStream;
+	outFileStream.open(OUT_FILE_PATH);
+	outFileStream << ranges[0] << " " << ranges[1] << "\n";
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_tMax, &tMax, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_nPts, &nPts, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_h, &h, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfInitialConditions, &amountOfInitialConditions, sizeof(int)));
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_writableVar, &writableVar, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_maxValue, &maxValue, sizeof(double)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_transientTime, &transientTime, sizeof(double)));
+
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfValues, &amountOfValues, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_preScaller, &preScaller, sizeof(int)));
+	
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsInBlock, &amountOfPointsInBlock, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_originalNPtsLimiter, &originalNPtsLimiter, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfPointsForSkip, &amountOfPointsForSkip, sizeof(int)));
+	gpuErrorCheck(cudaMemcpyToSymbol(d_init_conditions, &initialConditions, SIZE_X * sizeof(double)));
+	
+	int dimension = 1;
+	gpuErrorCheck(cudaMemcpyToSymbol(d_dimension, &dimension, sizeof(int)));
+
+	for (int i = 0; i < amountOfIteration; ++i)
+	{
+		if (i == amountOfIteration - 1)
+			nPtsLimiter = nPts - (nPtsLimiter * i);
+
+		int blockSize;			
+		int minGridSize;		
+		int gridSize;			
+		
+		blockSize = 160;
+
+		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
+
+		int calculatedPoints = i * originalNPtsLimiter;
+		gpuErrorCheck(cudaMemcpyToSymbol(d_nPtsLimiter, &nPtsLimiter, sizeof(int)));
+		gpuErrorCheck(cudaMemcpyToSymbol(d_amountOfCalculatedPoints, &calculatedPoints, sizeof(int)));
+
+		double* d_semi_result;
+		gpuErrorCheck(cudaMalloc((void**)& d_semi_result, nPtsLimiter * (amountOfInitialConditions + amountOfValues) * sizeof(double)));
+
+		calculateTransTimeCUDA << <gridSize, blockSize, (amountOfInitialConditions + amountOfValues) * sizeof(double) * blockSize >> >(
+						d_ranges,
+						d_indicesOfMutVars,
+						d_initialConditions,
+						d_values,
+						d_semi_result,
+						d_amountOfPeaks);
+		cudaDeviceSynchronize();
+
+		calculateDiscreteModelCUDA << <gridSize, blockSize, (amountOfInitialConditions + amountOfValues) * sizeof(double) * blockSize >> >(
+						d_ranges,
+						d_indicesOfMutVars,
+						d_initialConditions,
+						d_values,
+						d_data,
+						d_semi_result,
+						d_amountOfPeaks);
+
+		gpuGlobalErrorCheck();
+
+		gpuErrorCheck(cudaDeviceSynchronize());
+		cudaFree(d_semi_result);
+
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, peakFinderCUDA, 0, nPtsLimiter);
+		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
+
+		peakFinderCUDA << <gridSize, blockSize >> >
+			(	d_data,					
+				d_amountOfPeaks,			
+				d_data,						
+				d_intervals,				
+				h * (double)preScaller);	
+
+		gpuGlobalErrorCheck();
+
+		gpuErrorCheck(cudaDeviceSynchronize());
+
+		gpuErrorCheck(cudaMemcpy(h_dbscanResult, d_amountOfPeaks, nPtsLimiter * sizeof(int), cudaMemcpyKind::cudaMemcpyDeviceToHost));
+
+		double* h_outPeaks = new double[nPtsLimiter * amountOfPointsInBlock * sizeof(double)];
+		double* h_outIntervals = new double[nPtsLimiter * amountOfPointsInBlock * sizeof(double)];
+		
+		gpuErrorCheck(cudaMemcpy(h_outPeaks, d_data, nPtsLimiter * amountOfPointsInBlock * sizeof(double), cudaMemcpyKind::cudaMemcpyDeviceToHost));
+		gpuErrorCheck(cudaMemcpy(h_outIntervals, d_intervals, nPtsLimiter * amountOfPointsInBlock * sizeof(double), cudaMemcpyKind::cudaMemcpyDeviceToHost));
+
+		outFileStream << std::setprecision(12);
+
+		for (size_t k = 0; k < nPtsLimiter; ++k) {
+			if (h_dbscanResult[k] == -1) {
+				outFileStream << getValueByIdx(originalNPtsLimiter* i + k, nPts, ranges[0], ranges[1], 0) << ", " << h_outPeaks[k * amountOfPointsInBlock] << ", " << 0  << '\n';
+			}
+			else {
+				for (size_t j = 0; j < h_dbscanResult[k]; ++j)
+					if (outFileStream.is_open())
+					{
+						outFileStream << getValueByIdx(originalNPtsLimiter * i + k, nPts, ranges[0], ranges[1], 0) << ", " << h_outPeaks[k * amountOfPointsInBlock + j] << ", " << h_outIntervals[k * amountOfPointsInBlock + j] << '\n';
+					}
+					else
+					{
+						exit(1);
+					}
+			}
+		}
+		
+		delete[] h_outPeaks;
+		delete[] h_outIntervals;
+	}
+
+	gpuErrorCheck(cudaFree(d_data));
+	gpuErrorCheck(cudaFree(d_ranges));
+	gpuErrorCheck(cudaFree(d_indicesOfMutVars));
+	gpuErrorCheck(cudaFree(d_initialConditions));
+	gpuErrorCheck(cudaFree(d_values));
+
+	gpuErrorCheck(cudaFree(d_amountOfPeaks));
+	gpuErrorCheck(cudaFree(d_intervals));
+	gpuErrorCheck(cudaFree(d_dbscanResult));
+	gpuErrorCheck(cudaFree(d_helpfulArray));
+
+	delete[] h_dbscanResult;
+}
+
+
+
+
+
+
+
 
 } // Bifurcation_constants

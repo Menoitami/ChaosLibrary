@@ -2,6 +2,40 @@
 
 namespace Bifurcation {
 
+void bifurcation1D(
+	const double	tMax,							// Время моделирования системы
+	const int		nPts,							// Разрешение диаграммы
+	const double	h,								// Шаг интегрирования
+	const int		amountOfInitialConditions,		// Количество начальных условий ( уравнений в системе )
+	const double* initialConditions,				// Массив с начальными условиями
+	const double* ranges,							// Диаппазон изменения переменной
+	const int* indicesOfMutVars,				// Индекс изменяемой переменной в массиве values
+	const int		writableVar,					// Индекс уравнения, по которому будем строить диаграмму
+	const double	maxValue,						// Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	const double	transientTime,					// Время, которое будет промоделировано перед расчетом диаграммы
+	const double* values,							// Параметры
+	const int		amountOfValues,					// Количество параметров
+	const int		preScaller,
+	std::string		OUT_FILE_PATH)						// Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+{
+   
+    Bifurcation_constants::bifurcation1D(
+		tMax,							
+		nPts,						
+		h,							
+		amountOfInitialConditions,	
+		initialConditions,			
+		ranges,						
+		indicesOfMutVars,			
+		writableVar,				
+		maxValue,					
+		transientTime,				
+		values,						
+		amountOfValues,				
+		preScaller,
+		OUT_FILE_PATH)	;
+}
+
 void bifurcation2D(
     const double tMax,                              // Время моделирования системы
     const int nPts,                                // Разрешение диаграммы
