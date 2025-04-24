@@ -6,7 +6,7 @@ import os
 
 # Простые строковые пути
 workspace_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-input_dir = os.path.join(workspace_root, 'workspace/bifurcation')
+input_dir = os.path.join(workspace_root, 'workspace/LLE')
 output_dir = os.path.join(workspace_root, 'results')
 
 # Создаем директорию для результатов, если её нет
@@ -15,9 +15,9 @@ if not os.path.exists(output_dir):
     print(f"Создана директория для результатов: {output_dir}")
 
 # Имена входных и выходных файлов
-input_file1 = 'Bifurcation_test.csv'
-input_file2 = 'Bifurcation_test_old.csv'
-output_file = 'bifurcation_comparison.png'
+input_file1 = 'LLE_test.csv'
+input_file2 = 'LLE_test_old.csv'
+output_file = 'LLE_comparison.png'
 
 def load_data(filepath):
     data = []
@@ -98,4 +98,4 @@ def main(vmin=None, vmax=None):
 
 if __name__ == "__main__":
     # Example usage with manual vmin and vmax
-    main(vmin=0, vmax=20)
+    main(vmin=0, vmax=0.5)

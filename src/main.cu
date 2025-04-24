@@ -50,7 +50,7 @@ int main()
 	//auto start = std::chrono::high_resolution_clock::now();
 	// // --- Bifurcation: Легкий запуск ---
 	double CT = 2000;
-	int nPts = 500;
+	int nPts = 100;
 	double TT = 10000;
 	// {
 	// 	{
@@ -115,11 +115,11 @@ int main()
 			ranges, indicesOfMutVars, writableVar,
 			maxValue, TT,
 			a, sizeof(a) / sizeof(double),
-			std::string(BIFURCATION_OUTPUT_PATH) + "/LLE_test.csv"
+			std::string(LLE_OUTPUT_PATH) + "/LLE_test.csv"
 		);	
 		auto end = std::chrono::high_resolution_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/LLE_test_timing.txt";
+		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_timing.txt";
 		std::ofstream outFile(timingFileName);
 		if (outFile) {
 			outFile << duration;
@@ -140,11 +140,11 @@ int main()
 			ranges, indicesOfMutVars, writableVar,
 			maxValue, TT,
 			a, sizeof(a) / sizeof(double),
-			std::string(BIFURCATION_OUTPUT_PATH) + "/LLE_test.csv"
+			std::string(LLE_OUTPUT_PATH) + "/LLE_test_old.csv"
 		);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::string timingFileName = std::string(BIFURCATION_OUTPUT_PATH) + "/LLE_test_old_timing.txt";
+		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_old_timing.txt";
 		std::ofstream outFile(timingFileName);
 		if (outFile) {
 			outFile << duration;
