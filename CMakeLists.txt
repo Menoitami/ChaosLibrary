@@ -28,12 +28,14 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Basins/include
     ${CMAKE_CURRENT_SOURCE_DIR}/debri
     ${CMAKE_CURRENT_SOURCE_DIR}/LLE/include
     ${CMAKE_CURRENT_SOURCE_DIR}/systems
     )
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Bifurcation)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Basins)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/debri)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/LLE)
 
@@ -45,7 +47,7 @@ set(SOURCES
 add_executable(ChaosLib ${SOURCES})
 
 target_link_libraries(ChaosLib PRIVATE  ${CUDA_LIBRARIES})
-target_link_libraries(ChaosLib PUBLIC Bifurcation debri LLE)
+target_link_libraries(ChaosLib PUBLIC Bifurcation debri LLE Basins)
 
 # Передаем пути для каждой программы
 target_compile_definitions(ChaosLib PRIVATE 

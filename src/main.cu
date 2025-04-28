@@ -1,4 +1,5 @@
 #include "bifurcationHOST.h"
+#include "basinsHOST.h"
 #include "LLEHost.h"
 #include "hostLibrary.cuh"
 #include "LLECUDA.cuh"
@@ -47,11 +48,76 @@ int main()
 	int preScaller = 1;
 	double NT_lle = 0.5;
 #endif
-	//auto start = std::chrono::high_resolution_clock::now();
-	// // --- Bifurcation: Легкий запуск ---
-	double CT = 2000;
+#ifdef USE_SYSTEM_FOR_BASINS
+
+	double CT = 1000;
 	int nPts = 100;
 	double TT = 10000;
+	{
+		double params[5]{ 0.5, 0.1, 1.4,  15.552, 2 };
+		double init[3]{ 0, 0, 0,};
+
+		//double h = 0.01;
+		
+		std::cout << "Start basins" << std::endl;
+		auto start = std::chrono::high_resolution_clock::now();
+
+		Basins::basinsOfAttraction_2(
+			300,         // Время моделирования системы
+			100,         // Разрешение диаграммы
+			0.01,         // Шаг интегрирования
+			sizeof(init) / sizeof(double),   // Количество начальных условий ( уравнений в системе )
+			init,         // Массив с начальными условиями
+			new double[4]{ -200, 200, -60, 60},
+			new int[2] { 0, 1 },      // Индексы изменяемых параметров
+			1,          // Индекс уравнения, по которому будем строить диаграмму
+			100000000,        // Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+			300,         // Время, которое будет промоделировано перед расчетом диаграммы
+			params,         // Параметры
+			sizeof(params) / sizeof(double),  // Количество параметров
+			1,          // Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+			0.05,         // Эпсилон для алгоритма DBSCAN
+			std::string(BASINS_OUTPUT_PATH) + "/basinsOfAttraction_test.csv"
+		);
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		std::cout << "Time taken: " << duration << " milliseconds" << std::endl;
+	}
+	{
+		double params_old[5]{ 0.5, 0.1665, 1.4,  15.552, 2 };
+		double init_old[3]{ 0, 0, 0,};
+
+		std::cout << "Start old_library basins" << std::endl;
+		auto start_old = std::chrono::high_resolution_clock::now();
+
+		old_library::basinsOfAttraction_2(
+			300,         // Время моделирования системы
+			100,         // Разрешение диаграммы
+			0.01,         // Шаг интегрирования
+			sizeof(init_old) / sizeof(double),   // Количество начальных условий ( уравнений в системе )
+			init_old,         // Массив с начальными условиями
+			new double[4]{ -200, 200, -60, 60},
+			new int[2] { 0, 1 },      // Индексы изменяемых параметров
+			1,          // Индекс уравнения, по которому будем строить диаграмму
+			100000000,        // Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+			300,         // Время, которое будет промоделировано перед расчетом диаграммы
+			params_old,         // Параметры
+			sizeof(params_old) / sizeof(double),  // Количество параметров
+			1,          // Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+			0.05,         // Эпсилон для алгоритма DBSCAN
+			std::string(BASINS_OUTPUT_PATH) + "/basinsOfAttraction_test_old.csv"
+		);
+
+		auto end_old = std::chrono::high_resolution_clock::now();
+		auto duration_old = std::chrono::duration_cast<std::chrono::milliseconds>(end_old - start_old).count();
+		std::cout << "Time taken: " << duration_old << " milliseconds" << std::endl;
+	}
+
+
+#endif
+	//auto start = std::chrono::high_resolution_clock::now();
+	// // --- Bifurcation: Легкий запуск ---
+
 	// {
 	// 	{
 	// 		auto start = std::chrono::high_resolution_clock::now();
@@ -105,57 +171,57 @@ int main()
 
 
 
-{
-	//LLe
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		LLE::LLE2D(
-			CT, NT_lle, nPts, h, eps_lle,
-			init, sizeof(init) / sizeof(double), 
-			ranges, indicesOfMutVars, writableVar,
-			maxValue, TT,
-			a, sizeof(a) / sizeof(double),
-			std::string(LLE_OUTPUT_PATH) + "/LLE_test.csv"
-		);	
-		auto end = std::chrono::high_resolution_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_timing.txt";
-		std::ofstream outFile(timingFileName);
-		if (outFile) {
-			outFile << duration;
-			outFile.close();
-			std::cout << "LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-		}
-		else {
-			std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Test)!" << std::endl;
-		}	
+// {
+// 	//LLe
+// 	{
+// 		auto start = std::chrono::high_resolution_clock::now();
+// 		LLE::LLE2D(
+// 			CT, NT_lle, nPts, h, eps_lle,
+// 			init, sizeof(init) / sizeof(double), 
+// 			ranges, indicesOfMutVars, writableVar,
+// 			maxValue, TT,
+// 			a, sizeof(a) / sizeof(double),
+// 			std::string(LLE_OUTPUT_PATH) + "/LLE_test.csv"
+// 		);	
+// 		auto end = std::chrono::high_resolution_clock::now();
+// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_timing.txt";
+// 		std::ofstream outFile(timingFileName);
+// 		if (outFile) {
+// 			outFile << duration;
+// 			outFile.close();
+// 			std::cout << "LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+// 		}
+// 		else {
+// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени LLE (Test)!" << std::endl;
+// 		}	
 
 
-	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		old_library::LLE2D(
-			CT, NT_lle, nPts, h, eps_lle,
-			init, sizeof(init) / sizeof(double), 
-			ranges, indicesOfMutVars, writableVar,
-			maxValue, TT,
-			a, sizeof(a) / sizeof(double),
-			std::string(LLE_OUTPUT_PATH) + "/LLE_test_old.csv"
-		);
-		auto end = std::chrono::high_resolution_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_old_timing.txt";
-		std::ofstream outFile(timingFileName);
-		if (outFile) {
-			outFile << duration;
-			outFile.close();	
-			std::cout << "old_library::LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
-		}
-		else {
-			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Test)!" << std::endl;
-		}
-	}
-}
+// 	}
+// 	{
+// 		auto start = std::chrono::high_resolution_clock::now();
+// 		old_library::LLE2D(
+// 			CT, NT_lle, nPts, h, eps_lle,
+// 			init, sizeof(init) / sizeof(double), 
+// 			ranges, indicesOfMutVars, writableVar,
+// 			maxValue, TT,
+// 			a, sizeof(a) / sizeof(double),
+// 			std::string(LLE_OUTPUT_PATH) + "/LLE_test_old.csv"
+// 		);
+// 		auto end = std::chrono::high_resolution_clock::now();
+// 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+// 		std::string timingFileName = std::string(LLE_OUTPUT_PATH) + "/LLE_test_old_timing.txt";
+// 		std::ofstream outFile(timingFileName);
+// 		if (outFile) {
+// 			outFile << duration;
+// 			outFile.close();	
+// 			std::cout << "old_library::LLE (Test) Время выполнения: " << duration << " мс. Результат записан в файл: " << timingFileName << std::endl;
+// 		}
+// 		else {
+// 			std::cerr << "Ошибка: Не удалось открыть файл для записи времени old_library::LLE (Test)!" << std::endl;
+// 		}
+// 	}
+// }
 
 
 
