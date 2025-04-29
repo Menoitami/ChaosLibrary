@@ -25,23 +25,10 @@ namespace basinsGPU {
         std::string		OUT_FILE_PATH);	                  // Путь к выходному файлу
 
     __global__ void calculateDiscreteModelICCUDA(
-	const int		nPts, 
-	const int		nPtsLimiter, 
-	const int		sizeOfBlock, 
-	const int		amountOfCalculatedPoints, 
-	const int		amountOfPointsForSkip,
-	const int		dimension, 
 	double*			ranges, 
-	const double	h,
 	int*			indicesOfMutVars, 
 	double*			initialConditions,
-	const int		amountOfInitialConditions, 
 	const double*	values, 
-	const int		amountOfValues,
-	const int		amountOfIterations, 
-	const int		preScaller,
-	const int		writableVar, 
-	const double	maxValue, 
 	double*			data, 
 	int*			maxValueCheckerArray);
 

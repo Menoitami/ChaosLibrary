@@ -21,7 +21,6 @@ def load_data(filepath):
     return np.array(data)
 
 def create_custom_colormap(N_colormap, max_idx):
-    """Create a custom colormap similar to MATLAB's slanCM"""
     colors = []
     for i in range(max_idx):
         # Create a color gradient from blue to red

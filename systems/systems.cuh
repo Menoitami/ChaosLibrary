@@ -69,15 +69,14 @@ __device__ inline void calcDiscreteModel(double* x, const double* a, double h) {
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
         float h1 = h * a[0];
         float h2 = h * (1 - a[0]);
-        
-        X[0] = X[0] + h1 * (-X[1]);
-        X[1] = X[1] + h1 * (a[1] * X[0] + sin(X[1]));
-        
-        float z = X[1];
-        
-        X[1] = z + h2 * (a[1] * X[0] + sin(X[1]));
-        //X[1] = z + h2 * (a[1] * X[0] + sin(X[1]));
-        X[0] = X[0] + h2 * (-X[1]);          
+
+        X[0] = X[0] + h * (sin(X[1]) - a[1] * X[0]);
+        X[1] = X[1] + h * (sin(X[2]) - a[1] * X[1]);
+        X[2] = X[2] + h * (sin(X[0]) - a[1] * X[2]);
+
+        X[2] = (X[2] + h2 * sin(X[0])) / (1 + h2 * a[1]);
+        X[1] = (X[1] + h2 * sin(X[2])) / (1 + h2 * a[1]);
+        X[0] = (X[0] + h2 * sin(X[1])) / (1 + h2 * a[1]);        
     }
     #define SIZE_X 3
     #define SIZE_A 5

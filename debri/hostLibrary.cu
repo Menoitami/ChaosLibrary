@@ -5083,6 +5083,7 @@ __host__ void basinsOfAttraction_2(
 	delete[] h_avgPeaks;
 	delete[] h_avgIntervals;
 	delete[] h_helpfulArray;
+	cudaDeviceReset();
 
 	// ---------------------------
 }
