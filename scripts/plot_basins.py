@@ -125,7 +125,7 @@ def main():
             im = axes[i].imshow(data, cmap=custom_cmap, aspect='auto', 
                                extent=extent, origin='lower')
             
-            axes[i].set_title(f"Бассейны {file}")
+            #axes[i].set_title(f"Бассейны {file}")
             axes[i].set_xlabel('Параметр X')
             axes[i].set_ylabel('Параметр Y')
             

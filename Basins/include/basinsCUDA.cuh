@@ -40,6 +40,9 @@ __global__ void calculateTransTimeCUDA(
 	double*			semi_result,
 	int*			maxValueCheckerArray);
 
+__global__ void calculateTransferResultCUDA(
+    double*         semi_result);
+
 __global__ void calculateDiscreteModelCUDA(
 	double*			ranges, 
 	int*			indicesOfMutVars, 

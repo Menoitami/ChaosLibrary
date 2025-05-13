@@ -6,19 +6,19 @@
 #include "device_launch_parameters.h"
 #include <math.h>
 
-#define USE_SYSTEM_FOR_BASINS  
+#define USE_SYSTEM_FOR_BASINS
 
 #ifdef USE_CHAMELEON_MODEL
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
-    	double h1 = a[0] * h;
-	double h2 = (1 - a[0]) * h;
-	X[0] = X[0] + h1 * (-a[6] * X[1]);
-	X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
-	X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
+        double h1 = a[0] * h;
+        double h2 = (1 - a[0]) * h;
+        X[0] = X[0] + h1 * (-a[6] * X[1]);
+        X[1] = X[1] + h1 * (a[6] * X[0] + a[1] * X[2]);
+        X[2] = X[2] + h1 * (a[2] - a[3] * X[2] + a[4] * cos(a[5] * X[1]));
 
-	X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
-	X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
-	X[0] = X[0] + h2 * (-a[6] * X[1]);
+        X[2] = (X[2] + h2 * (a[2] + a[4] * cos(a[5] * X[1]))) / (1 + a[3] * h2);
+        X[1] = X[1] + h2 * (a[6] * X[0] + a[1] * X[2]);
+        X[0] = X[0] + h2 * (-a[6] * X[1]);
         // double h1 = a[0] * h;                                             
         // double h2 = (1 - a[0]) * h;                                       
                                                                           
@@ -80,6 +80,24 @@ __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
     }
     #define SIZE_X 3
     #define SIZE_A 5
+    #define CALC_DISCRETE_MODEL(X, a, h) calcDiscreteModel(X, a, h)
+#endif
+
+#ifdef USE_SYSTEM_FOR_BASINS_2
+__device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
+    float h1 = h * a[0];
+    float h2 = h * (1 - a[0]);
+    
+    X[0] = X[0] + h1 * (-X[1]);
+    X[1] = X[1] + h1 * (a[1] * X[0] + sin(X[1]));
+    
+    float z = X[1];
+    
+    X[1] = z + h2 * (a[1] * X[0] + sin(X[1]));
+    X[0] = X[0] + h2 * (-X[1]);       
+    }
+    #define SIZE_X 2
+    #define SIZE_A 2
     #define CALC_DISCRETE_MODEL(X, a, h) calcDiscreteModel(X, a, h)
 #endif
 

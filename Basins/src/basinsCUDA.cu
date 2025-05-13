@@ -266,6 +266,7 @@ __global__ void calculateTransTimeCUDA(
         for (int i = 0; i < d_amountOfPointsForSkip; ++i) {
             calculateDiscreteModel(localX, localValues, d_h);
 
+
         }
     }
 

@@ -32,7 +32,7 @@ def load_data(filepath):
 def main():
     # Парсинг аргументов командной строки
     parser = argparse.ArgumentParser(description='Отрисовка тепловой карты из данных CSV')
-    parser.add_argument('--input', '-i', type=str, default='LLE_test.csv',
+    parser.add_argument('--input', '-i', type=str, default='LLE_2D_graph_chameleon.csv',
                         help='Имя входного файла')
     parser.add_argument('--dir', '-d', type=str, default=None,
                         help='Директория с входным файлом')
@@ -54,7 +54,7 @@ def main():
     if args.dir:
         input_dir = os.path.join(workspace_root, args.dir)
     else:
-        input_dir = os.path.join(workspace_root, 'workspace/bifurcation')
+        input_dir = os.path.join(workspace_root, 'workspace/LLE')
     
     output_dir = os.path.join(workspace_root, 'results')
     
@@ -94,7 +94,7 @@ def main():
     if args.title:
         title = args.title
     else:
-        title = f"Heatmap: {input_file}"
+        title = f"LLE 2D"
     
     # Построение графика
     plt.figure(figsize=(10, 8))
@@ -104,7 +104,8 @@ def main():
     
     im = plt.imshow(data, cmap=args.cmap, aspect='auto', vmin=args.vmin, vmax=args.vmax, 
                    extent=extent, origin='lower')
-    
+    # Переворачиваем данные на 180 градусов
+    plt.gca().invert_yaxis()
     plt.colorbar(im, label='Значение')
     plt.title(title)
     plt.xlabel('Параметр X')

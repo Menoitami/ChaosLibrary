@@ -108,16 +108,16 @@ def main():
     
     # Поиск файлов в директории basins
     for file in os.listdir(input_dir):
-        if file.startswith("basinsOfAttraction_test.csv"):
-            if file == "basinsOfAttraction_test.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
+        if file.startswith("basinsOfAttraction_system_for_basins_graph.csv"):
+            if file == "basinsOfAttraction_system_for_basins_graph.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
                 new_files.append(file)
-        elif file.startswith("basinsOfAttraction_test_old.csv"):
-            if file == "basinsOfAttraction_test_old.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
+        elif file.startswith("basinsOfAttraction_system_for_basins_graph_2.csv"):
+            if file == "basinsOfAttraction_system_for_basins_graph_2.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
                 old_files.append(file)
     
     # Явная сортировка файлов в правильном порядке
     def sort_key(filename):
-        if filename == "basinsOfAttraction_test.csv" or filename == "basinsOfAttraction_test_old.csv":
+        if filename == "basinsOfAttraction_system_for_basins_graph.csv" or filename == "basinsOfAttraction_system_for_basins_graph_2.csv":
             return 0
         elif filename.endswith("_1.csv"):
             return 1
@@ -184,7 +184,7 @@ def main():
             im = axes_new[i].imshow(data, cmap=custom_cmap, aspect='auto', 
                                extent=extent, origin='lower')
             
-            axes_new[i].set_title(f"Бассейны {file}")
+            #axes_new[i].set_title(f"Бассейны {file}")
             axes_new[i].set_xlabel('Параметр X')
             axes_new[i].set_ylabel('Параметр Y')
             
@@ -226,7 +226,7 @@ def main():
             im = axes_old[i].imshow(data, cmap=custom_cmap, aspect='auto', 
                                extent=extent, origin='lower')
             
-            axes_old[i].set_title(f"Старые бассейны {file}")
+            #axes_old[i].set_title(f"Старые бассейны {file}")
             axes_old[i].set_xlabel('Параметр X')
             axes_old[i].set_ylabel('Параметр Y')
             
@@ -272,7 +272,7 @@ def main():
             im = axes_diff[i].imshow(diff_data, cmap=diff_cmap, aspect='auto', 
                                  extent=extent, origin='lower', vmin=0, vmax=1)
             
-            axes_diff[i].set_title(f"Разница: {os.path.basename(new_file)} vs {os.path.basename(old_file)}\n{percent_changed:.2f}% изменений")
+            #axes_diff[i].set_title(f"Разница: {os.path.basename(new_file)} vs {os.path.basename(old_file)}\n{percent_changed:.2f}% изменений")
             axes_diff[i].set_xlabel('Параметр X')
             axes_diff[i].set_ylabel('Параметр Y')
             

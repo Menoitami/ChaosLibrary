@@ -6,7 +6,7 @@
 #include <systems.cuh>
 #include <cmath>
 
-
+#define DEBUG
 
 namespace Bifurcation_constants {
 __constant__ double d_tMax;
@@ -134,7 +134,11 @@ __host__ void bifurcation2D(
 	int dimension = 2;
 	gpuErrorCheck(cudaMemcpyToSymbol(d_dimension, &dimension, sizeof(int)));
 
-
+	#ifdef DEBUG
+		printf("Bifurcation 2D\n");
+		printf("nPtsLimiter : %zu\n", nPtsLimiter);
+		printf("Amount of iterations %zu: \n", amountOfIteration);
+	#endif
 	for (int i = 0; i < amountOfIteration; ++i)
 	{
 
@@ -232,6 +236,9 @@ __host__ void bifurcation2D(
 			{
 				exit(1);
 			}
+		#ifdef DEBUG
+		printf("Progress: %f\%\n", (100.0f / (double)amountOfIteration) * (i + 1));
+		#endif
 	}
 
 
@@ -660,6 +667,12 @@ __host__ void bifurcation1D(
 	int dimension = 1;
 	gpuErrorCheck(cudaMemcpyToSymbol(d_dimension, &dimension, sizeof(int)));
 
+	#ifdef DEBUG
+	printf("Bifurcation 1D\n");
+	printf("nPtsLimiter : %zu\n", nPtsLimiter);
+	printf("Amount of iterations %zu: \n", amountOfIteration);
+	#endif
+
 	for (int i = 0; i < amountOfIteration; ++i)
 	{
 		if (i == amountOfIteration - 1)
@@ -670,7 +683,6 @@ __host__ void bifurcation1D(
 		int gridSize;			
 		
 		blockSize = 160;
-
 		gridSize = (nPtsLimiter + blockSize - 1) / blockSize;
 
 		int calculatedPoints = i * originalNPtsLimiter;
@@ -687,6 +699,7 @@ __host__ void bifurcation1D(
 						d_values,
 						d_semi_result,
 						d_amountOfPeaks);
+		gpuGlobalErrorCheck();
 		cudaDeviceSynchronize();
 
 		calculateDiscreteModelCUDA << <gridSize, blockSize, (amountOfInitialConditions + amountOfValues) * sizeof(double) * blockSize >> >(
@@ -719,9 +732,15 @@ __host__ void bifurcation1D(
 
 		gpuErrorCheck(cudaMemcpy(h_dbscanResult, d_amountOfPeaks, nPtsLimiter * sizeof(int), cudaMemcpyKind::cudaMemcpyDeviceToHost));
 
-		double* h_outPeaks = new double[nPtsLimiter * amountOfPointsInBlock * sizeof(double)];
-		double* h_outIntervals = new double[nPtsLimiter * amountOfPointsInBlock * sizeof(double)];
-		
+		double* h_outPeaks = new (std::nothrow) double[nPtsLimiter * amountOfPointsInBlock];
+		double* h_outIntervals = new (std::nothrow) double[nPtsLimiter * amountOfPointsInBlock];
+		if (!h_outPeaks || !h_outIntervals) {
+			std::cerr << "Memory allocation failed" << std::endl;
+			if (h_outPeaks) delete[] h_outPeaks;
+			if (h_outIntervals) delete[] h_outIntervals;
+			exit(1);
+		}
+
 		gpuErrorCheck(cudaMemcpy(h_outPeaks, d_data, nPtsLimiter * amountOfPointsInBlock * sizeof(double), cudaMemcpyKind::cudaMemcpyDeviceToHost));
 		gpuErrorCheck(cudaMemcpy(h_outIntervals, d_intervals, nPtsLimiter * amountOfPointsInBlock * sizeof(double), cudaMemcpyKind::cudaMemcpyDeviceToHost));
 
@@ -743,7 +762,9 @@ __host__ void bifurcation1D(
 					}
 			}
 		}
-		
+		#ifdef DEBUG
+		printf("Progress: %f\%\n", (100.0f / (double)amountOfIteration) * (i + 1));
+		#endif
 		delete[] h_outPeaks;
 		delete[] h_outIntervals;
 	}
