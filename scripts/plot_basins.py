@@ -66,7 +66,7 @@ def create_custom_colormap():
 def main():
     # Настройка путей
     workspace_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-    input_dir = os.path.join(workspace_root, 'workspace/basins')
+    input_dir = os.path.join(workspace_root, 'workspace/bifurcation')
     output_dir = os.path.join(workspace_root, 'results')
     
     # Создаем директорию для результатов, если её нет
@@ -77,7 +77,7 @@ def main():
     # Поиск файлов в директории basins
     basin_files = []
     for file in os.listdir(input_dir):
-        if file.startswith("basinsOfAttraction") and file.endswith(".csv"):
+        if file.startswith("bifurcation") and file.endswith(".csv"):
             basin_files.append(file)
     
     # Сортировка файлов

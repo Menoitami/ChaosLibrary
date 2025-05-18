@@ -32,7 +32,7 @@ def load_data(filepath):
 def main():
     # Парсинг аргументов командной строки
     parser = argparse.ArgumentParser(description='Отрисовка тепловой карты из данных CSV')
-    parser.add_argument('--input', '-i', type=str, default='LLE_2D_graph_chameleon.csv',
+    parser.add_argument('--input', '-i', type=str, default='damir_test.csv',
                         help='Имя входного файла')
     parser.add_argument('--dir', '-d', type=str, default=None,
                         help='Директория с входным файлом')

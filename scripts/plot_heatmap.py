@@ -15,9 +15,9 @@ if not os.path.exists(output_dir):
     print(f"Создана директория для результатов: {output_dir}")
 
 # Имена входных и выходных файлов
-input_file1 = 'Bfurcation_graph_2D_rossler.csv'
-input_file2 = 'Bfurcation_graph_2D_rossler_old.csv'
-output_file = 'Bfurcation_graph_2D_rossler_comparison.png'
+input_file1 = 'bif2d_res_test_500.csv'
+input_file2 = 'bif2d_old_res_test_500.csv'
+output_file = 'bif2d_res_test_500_comparison.png'
 
 def load_data(filepath):
     data = []

@@ -108,16 +108,16 @@ def main():
     
     # Поиск файлов в директории basins
     for file in os.listdir(input_dir):
-        if file.startswith("basinsOfAttraction_system_for_basins_graph.csv"):
-            if file == "basinsOfAttraction_system_for_basins_graph.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
+        if file.startswith("basins_res_test_300.csv"):
+            if file == "basins_res_test_300.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
                 new_files.append(file)
-        elif file.startswith("basinsOfAttraction_system_for_basins_graph_2.csv"):
-            if file == "basinsOfAttraction_system_for_basins_graph_2.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
+        elif file.startswith("old_basins_res_test_300.csv"):
+            if file == "old_basins_res_test_300.csv" or file.endswith("_1.csv") or file.endswith("_2.csv") or file.endswith("_3.csv"):
                 old_files.append(file)
     
     # Явная сортировка файлов в правильном порядке
     def sort_key(filename):
-        if filename == "basinsOfAttraction_system_for_basins_graph.csv" or filename == "basinsOfAttraction_system_for_basins_graph_2.csv":
+        if filename == "basins_res_test_300.csv" or filename == "old_basins_res_test_300.csv":
             return 0
         elif filename.endswith("_1.csv"):
             return 1

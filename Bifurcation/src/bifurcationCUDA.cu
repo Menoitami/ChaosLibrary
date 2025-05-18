@@ -211,14 +211,13 @@ __host__ void bifurcation2D(
 				d_helpfulArray,
 				eps,
 				d_dbscanResult);
-
+		
 		gpuGlobalErrorCheck();
 		gpuErrorCheck(cudaDeviceSynchronize());
 
 		gpuErrorCheck(cudaMemcpy(h_dbscanResult, d_dbscanResult, nPtsLimiter * sizeof(int), cudaMemcpyKind::cudaMemcpyDeviceToHost));
 
 		outFileStream << std::setprecision(12);
-
 		for (size_t i = 0; i < nPtsLimiter; ++i)
 			if (outFileStream.is_open())
 			{
@@ -607,7 +606,7 @@ __host__ void bifurcation1D(
 	size_t freeMemory;											
 	size_t totalMemory;											
 	gpuErrorCheck(cudaMemGetInfo(&freeMemory, &totalMemory));	
-	freeMemory *= 0.95;				
+	freeMemory *= 0.8;				
 	size_t nPtsLimiter = freeMemory / (sizeof(double) * amountOfPointsInBlock * 3);
 	nPtsLimiter = nPtsLimiter > nPts ? nPts : nPtsLimiter;	
 	size_t originalNPtsLimiter = nPtsLimiter;				
