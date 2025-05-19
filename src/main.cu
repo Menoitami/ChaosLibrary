@@ -24,7 +24,7 @@
 // Структура для хранения результатов тестов
 
 void runBasinsPerformanceTests() {
-	std::ofstream resultsFile("performance_results.csv");
+	std::ofstream resultsFile("basins_performance_results.csv");
 	if (!resultsFile) {
 		std::cerr << "Ошибка: Не удалось открыть файл для записи результатов!" << std::endl;
 		return;
@@ -34,8 +34,8 @@ void runBasinsPerformanceTests() {
 	resultsFile << "Test,Parameter,Value,Library,ExecutionTime_ms" << std::endl;
 	
 	// Параметры для тестов
-	std::vector<int> resolutions = {100, 300, 500};  // Тест по разрешению
-	std::vector<int> modelingTimes = {1000, 3000, 5000};  // Тест по времени моделирования
+	std::vector<int> resolutions = {100,200, 300,400, 500,600};  // Тест по разрешению
+	std::vector<int> modelingTimes = {1000, 2000, 3000, 4000, 5000,6000};  // Тест по времени моделирования
 	
 	double params[5]{ 0.5, 0.1, 1.4, 15.552, 2 };
 	double init[3]{ 0, 0, 0 };
@@ -227,9 +227,7 @@ void runLLEPerformanceTests() {
 	resultsFile << "Test,Parameter,Value,Library,ExecutionTime_ms" << std::endl;
 	
 	// Параметры для тестов
-	std::vector<int> resolutions = {100, 300, 500};  // Тест по разрешению
-	std::vector<double> ntValues = {0.3, 0.5, 0.7};  // Тест по значению NT
-	
+	std::vector<int> resolutions = {100, 200, 300, 400, 500, 600};  // Тест по разрешению	
 	double h = 0.01;  // Шаг интегрирования
 	double eps_lle = 1e-6;  // Эпсилон для LLE
 	
@@ -379,7 +377,7 @@ void runLLEPerformanceTests() {
 	int fixedResolution = 300; // Фиксированное разрешение
 	// Тест 3: Влияние времени моделирования (TT)
 	std::cout << "\n===== Тест 3: Влияние времени моделирования на время выполнения LLE =====\n";
-	std::vector<int> modelingTimes = {1000, 2000, 3000, 5000};  // Тест по времени моделирования
+	std::vector<int> modelingTimes = {1000, 2000, 3000, 4000, 5000, 6000};  // Тест по времени моделирования
 	
 	for (int modelingTime : modelingTimes) {
 		std::cout << "\nТестирование с временем моделирования = " << modelingTime << std::endl;
@@ -459,8 +457,8 @@ void runBifurcationPerformanceTests() {
 	resultsFile << "Test,Parameter,Value,Library,ExecutionTime_ms,Dimension" << std::endl;
 	
 	// Параметры для тестов
-	std::vector<int> resolutions = {100, 300, 500};  // Тест по разрешению (nPts)
-	std::vector<int> modelingTimes = {1000, 2000, 3000,5000};  // Тест по времени моделирования (TT)
+	std::vector<int> resolutions = {100, 200, 300, 400, 500, 600};  // Тест по разрешению (nPts)
+	std::vector<int> modelingTimes = {1000, 2000, 3000, 4000, 5000, 6000};  // Тест по времени моделирования (TT)
 	
 	double h = 0.01;  // Шаг интегрирования
 	
@@ -504,7 +502,7 @@ void runBifurcationPerformanceTests() {
 				maxValue, fixedTT,
 				params, sizeof(params) / sizeof(double),
 				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/perf_tests/bif2d_res_test_" + std::to_string(resolution) + ".csv"
+				std::string(BIFURCATION_OUTPUT_PATH) + "/bif2d_res_test_" + std::to_string(resolution) + ".csv"
 			);
 			
 			auto end1 = std::chrono::high_resolution_clock::now();
@@ -530,7 +528,7 @@ void runBifurcationPerformanceTests() {
 				maxValue, fixedTT,
 				params, sizeof(params) / sizeof(double),
 				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/perf_tests/bif2d_old_res_test_" + std::to_string(resolution) + ".csv"
+				std::string(BIFURCATION_OUTPUT_PATH) + "/bif2d_old_res_test_" + std::to_string(resolution) + ".csv"
 			);
 			
 			auto end2 = std::chrono::high_resolution_clock::now();
@@ -572,7 +570,7 @@ void runBifurcationPerformanceTests() {
 				maxValue, modelingTime,
 				params, sizeof(params) / sizeof(double),
 				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/perf_tests/bif2d_tt_test_" + std::to_string(modelingTime) + ".csv"
+				std::string(BIFURCATION_OUTPUT_PATH) + "/bif2d_tt_test_" + std::to_string(modelingTime) + ".csv"
 			);
 			
 			auto end1 = std::chrono::high_resolution_clock::now();
@@ -598,7 +596,7 @@ void runBifurcationPerformanceTests() {
 				maxValue, modelingTime,
 				params, sizeof(params) / sizeof(double),
 				preScaller, eps_bif,
-				std::string(BIFURCATION_OUTPUT_PATH) + "/perf_tests/bif2d_old_tt_test_" + std::to_string(modelingTime) + ".csv"
+				std::string(BIFURCATION_OUTPUT_PATH) + "/bif2d_old_tt_test_" + std::to_string(modelingTime) + ".csv"
 			);
 			
 			auto end2 = std::chrono::high_resolution_clock::now();
@@ -635,12 +633,12 @@ int main()
 
 	double CT = 1000;
 	double NT = 0.5;
-	double resolution = 100;
+	double resolution = 50;
 	double TT = 5000;
 
 	double a[2] {1,1};
-	double init[4] {0,0,0,0};
-	double ranges[4] {0,2e-6,0,2000};
+	double init[4] {0.00001,100,0};
+	double ranges[4] {0,2e-5,0,2000};
 	int indicesOfMutVars[2] {0,1};
 	int writableVar = 0;
 	double maxValue = 10000;
@@ -669,8 +667,8 @@ int main()
 	double eps_lle = 1e-6;
 	int preScaller = 1;
 	double NT_lle = 0.5;
-	//runBifurcationPerformanceTests();
-	//runLLEPerformanceTests();
+	runBifurcationPerformanceTests();
+	runLLEPerformanceTests();
 	runBasinsPerformanceTests();
 #endif
 
@@ -699,13 +697,38 @@ int main()
 	int preScaller = 1;
 	double NT_lle = 0.5;
 
-	{
-		//double h = 0.01;
+	// {
+	// 	//double h = 0.01;
+	// 	std::cout << "Start basins" << std::endl;
+	// 	auto start = std::chrono::high_resolution_clock::now();
 		
+	// 	Basins::basinsOfAttraction_2(
+	// 		200,         // Время моделирования системы
+	// 		500,         // Разрешение диаграммы
+	// 		0.01,         // Шаг интегрирования
+	// 		sizeof(init) / sizeof(double),   // Количество начальных условий ( уравнений в системе )
+	// 		init,         // Массив с начальными условиями
+	// 		ranges,
+	// 		indicesOfMutVars,
+	// 		1,          // Индекс уравнения, по которому будем строить диаграмму
+	// 		100000000,        // Максимальное значение (по модулю), выше которого система считаемся "расшедшейся"
+	// 		2000,         // Время, которое будет промоделировано перед расчетом диаграммы
+	// 		params,         // Параметры
+	// 		sizeof(params) / sizeof(double),  // Количество параметров
+	// 		1,          // Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
+	// 		0.05,         // Эпсилон для алгоритма DBSCAN
+	// 		std::string(BASINS_OUTPUT_PATH) + "/bas.csv"
+	// 	);
+	// 	auto end = std::chrono::high_resolution_clock::now();
+	// 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 	std::cout << "Time taken: " << duration << " milliseconds" << std::endl;
+	// }
+		{
+		//double h = 0.01;
 		std::cout << "Start basins" << std::endl;
 		auto start = std::chrono::high_resolution_clock::now();
 		
-		Basins::basinsOfAttraction_2(
+		old_library::basinsOfAttraction_2(
 			200,         // Время моделирования системы
 			500,         // Разрешение диаграммы
 			0.01,         // Шаг интегрирования
@@ -720,7 +743,7 @@ int main()
 			sizeof(params) / sizeof(double),  // Количество параметров
 			1,          // Множитель, который уменьшает время и объем расчетов (будет рассчитываться только каждая 'preScaller' точка)
 			0.05,         // Эпсилон для алгоритма DBSCAN
-			std::string(BASINS_OUTPUT_PATH) + "/basinsOfAttraction_system_for_basins_graph.csv"
+			std::string(BASINS_OUTPUT_PATH) + "/bas_old.csv"
 		);
 		auto end = std::chrono::high_resolution_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();

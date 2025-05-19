@@ -6,7 +6,7 @@
 #include "device_launch_parameters.h"
 #include <math.h>
 
-#define USE_DAMIR_SYSTEM
+#define USE_CHAMELEON_MODEL
 
 #ifdef USE_CHAMELEON_MODEL
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
@@ -102,12 +102,10 @@ __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
 
 #ifdef USE_DAMIR_SYSTEM
 __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
-    // X[0] = Vc, X[1] = XSV, X[2] = sin(omega t), X[3] = cos(omega t)
+    // X[0] = Vc, X[1] = XSV
     double Vc = X[0];
     double XSV = X[1];
-    double S = X[2];
-    double C = X[3];
-
+    double t = X[2];
     double U1 = 0.0;
     double U2 = -0.04;
     double C1 = 22e-9;
@@ -124,8 +122,11 @@ __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
     double Vd = Vc + U2;
     double Vm = Vc + U1;
 
+    // idiode
     double idiode = Is * (exp(Vd/Vt) - exp(-Vd/Vt));
+    // itunnel
     double itunnel = Ip/Vp * Vd * exp(-(Vd - Vp)/Vp);
+    // iex
     double iex = Iv * (atan(D*(Vd - E)) + atan(D*(Vd + E)));
     double Id = idiode + itunnel + iex;
 
@@ -141,8 +142,10 @@ __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
     double boltz = 1.380649e-23;
     double echarge = 1.602176634e-19;
 
+    // g(V2)
     double g = XSV/Ron + (1.0 - XSV)/Roff;
 
+    // Вспомогательные экспоненты
     double arg1 = -1.0/(T*boltz/echarge)*(Vm-Von1)*(Vm-Von2);
     double arg2 = -1.0/(T*boltz/echarge)*(Vm-Voff2)*(Vm-Voff1);
 
@@ -155,28 +158,21 @@ __device__ inline void calcDiscreteModel(double* X, const double* a, double h) {
     double Ix = (1.0/TAU) * (f1 * (1.0 - XSV) - (1.0 - f2) * XSV);
     double Imem = Vm * g;
 
-    // --- Iin: синусоида через прошлое состояние ---
-    // a[0] = амплитуда, a[1] = частота (omega)
-    double Iin = a[0] * S;
+    // --- Iin: синусоида ---
+    // a[0] = амплитуда, a[1] = частота
+    double Iin = a[0] * sin(a[1] * t);
 
     // --- Производные ---
     double dVc = (Iin - Imem - Id) / C1;
     double dXSV = Ix;
 
-    // --- Обновление синуса и косинуса ---
-    double omega = a[1];
-    double sh = sin(omega * h);
-    double ch = cos(omega * h);
-    double S_new = S * ch + C * sh;
-    double C_new = C * ch - S * sh;
-
     // --- Эйлеровский шаг ---
+
     X[0] = Vc + h * dVc;
     X[1] = XSV + h * dXSV;
-    X[2] = S_new;
-    X[3] = C_new;
+    X[2] = t + h;
 }
-#define SIZE_X 4
+#define SIZE_X 3
 #define SIZE_A 2
 #define CALC_DISCRETE_MODEL(X, a, h) calcDiscreteModel(X, a, h)
 #endif
